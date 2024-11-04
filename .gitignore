@@ -1,0 +1,14 @@
+# Generated meta data
+**/.DS_Store
+
+# Ignore directories that are generated
+evdk_workspace_mcuxpresso/frdmmcxn947_evdk5_0/Debug
+evdk_workspace_mcuxpresso/frdmmcxn947_evdk5_0/Release
+evdk_workspace_qt/build*
+
+# Ignore user specific settings files
+evdk_workspace_mcuxpresso/frdmmcxn947_evdk5_0/.settings
+evdk_workspace_mcuxpresso/frdmmcxn947_evdk5_0/.default_mex
+evdk_workspace_mcuxpresso/frdmmcxn947_evdk5_0/*.launch
+evdk_workspace_mcuxpresso/frdmmcxn947_evdk5_0/*.jlink
+evdk_workspace_qt/*.pro.user
