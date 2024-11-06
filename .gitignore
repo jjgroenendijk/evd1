@@ -1,6 +1,9 @@
 # Generated meta data
 **/.DS_Store
 
+# Ignore Doxygen directory
+evdk_doxygen*
+
 # Ignore directories that are generated
 evdk_workspace_mcuxpresso/frdmmcxn947_evdk5_0/Debug
 evdk_workspace_mcuxpresso/frdmmcxn947_evdk5_0/Release
