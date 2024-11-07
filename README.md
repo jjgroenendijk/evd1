@@ -22,6 +22,8 @@ For people also submitting changes, here are some additional useful commands:
 
 * Verify local changes<br />
   <code>git status</code>
+* Verify which files and folders are ignored<br />
+  <code>git status --ignored</code>
 * Prepare local changes before committing<br />
   <code>git add \<file-name OR folder-name\></code><br />
   <code>git add \<file-name OR folder-name\></code>
