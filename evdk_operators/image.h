@@ -97,9 +97,9 @@ typedef float float_pixel_t;
 ///
 /// 32 bits per two pixels stored in the following format:
 ///
-//  31                                0
-// |YYYYYYYY VVVVVVVV|YYYYYYYY UUUUUUUU|
-// |     pixel 2     |     pixel 1     |
+///  31                                0
+/// |YYYYYYYY VVVVVVVV|YYYYYYYY UUUUUUUU|
+/// |     pixel 2     |     pixel 1     |
 typedef uint16_t uyvy_pixel_t;
 
 /// \brief Type definition of an BGR888 pixel
