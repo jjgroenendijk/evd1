@@ -178,9 +178,9 @@ int main(void)
     // Select one example
     // -------------------------------------------------------------------------
 
-//    exampleWebcamBgr888();
+    exampleWebcamBgr888();
 //    exampleWebcamUint8();
-    exampleWebcamBgr888TestPattern();
+//    exampleWebcamBgr888TestPattern();
 //    exampleWebcamUint8TestPattern();
 //    exampleThreshold();
 //    exampleRotate();
