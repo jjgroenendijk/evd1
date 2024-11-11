@@ -178,9 +178,9 @@ int main(void)
     // Select one example
     // -------------------------------------------------------------------------
 
-    exampleWebcamBgr888();
+//    exampleWebcamBgr888();
 //    exampleWebcamUint8();
-//    exampleWebcamBgr888TestPattern();
+    exampleWebcamBgr888TestPattern();
 //    exampleWebcamUint8TestPattern();
 //    exampleThreshold();
 //    exampleRotate();
@@ -490,17 +490,9 @@ void exampleWebcamBgr888TestPattern(void)
             cnt = (cnt == (numberOfColors-1)) ? 0 : cnt + 1;
         }
 
-        // Set all pixels to color
-        bgr888_pixel_t *bgr888_pixel = (bgr888_pixel_t *)bgr888->data;
-        int32_t len = bgr888->rows * bgr888->cols;
+        // \todo Copy-and-paste week 1 code here
 
-        while(len > 0)
-        {
-            *bgr888_pixel = color;
 
-            bgr888_pixel++;
-            len--;
-        }
 
         // Convert bgr888_pixel_t image to USB
         copyBgr888Image(bgr888, usb);
