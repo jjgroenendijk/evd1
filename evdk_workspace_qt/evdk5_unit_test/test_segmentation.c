@@ -328,6 +328,42 @@ void test_threshold2Means(void)
         1,   1,   1,   1,   1,   1,   1,   1,
     };
 
+    uint8_pixel_t src_data_test_case_03[8 * 8] =
+    {
+        1,   2,   2,   2,   3,   3,   3,   3,
+        4,   4,   4,   5,   7,   8,   8,   8,
+        9,   9,   9,   9,   9,   9,   9,   9,
+        9,   9,   9,   9,   9,   9,   9,   9,
+        9,   9,   9,   9,   9,   9,   9,   9,
+        9,   9,   9,   9,   9,   9,   9,   9,
+        9,   9,   9,   9,   9,   9,   9,   9,
+        9,   9,   9,   9,  10,  10,  10,  11,
+    };
+
+    uint8_pixel_t exp_data_test_case_05[8 * 8] =
+    {
+        1,   1,   1,   1,   1,   1,   1,   1,
+        1,   1,   1,   1,   0,   0,   0,   0,
+        0,   0,   0,   0,   0,   0,   0,   0,
+        0,   0,   0,   0,   0,   0,   0,   0,
+        0,   0,   0,   0,   0,   0,   0,   0,
+        0,   0,   0,   0,   0,   0,   0,   0,
+        0,   0,   0,   0,   0,   0,   0,   0,
+        0,   0,   0,   0,   0,   0,   0,   0,
+    };
+
+    uint8_pixel_t exp_data_test_case_06[8 * 8] =
+    {
+        0,   0,   0,   0,   0,   0,   0,   0,
+        0,   0,   0,   0,   1,   1,   1,   1,
+        1,   1,   1,   1,   1,   1,   1,   1,
+        1,   1,   1,   1,   1,   1,   1,   1,
+        1,   1,   1,   1,   1,   1,   1,   1,
+        1,   1,   1,   1,   1,   1,   1,   1,
+        1,   1,   1,   1,   1,   1,   1,   1,
+        1,   1,   1,   1,   1,   1,   1,   1,
+    };
+
     uint8_pixel_t dst_data[8 * 8] =
     {
         0,   0,   0,   0,   0,   0,   0,   0,
@@ -353,6 +389,8 @@ void test_threshold2Means(void)
          {src_data_test_case_01, exp_data_test_case_02, BRIGHTNESS_BRIGHT},
          {src_data_test_case_02, exp_data_test_case_03, BRIGHTNESS_DARK},
          {src_data_test_case_02, exp_data_test_case_04, BRIGHTNESS_BRIGHT},
+         {src_data_test_case_03, exp_data_test_case_05, BRIGHTNESS_DARK},
+         {src_data_test_case_03, exp_data_test_case_06, BRIGHTNESS_BRIGHT},
      };
 
      // Prepare images
@@ -469,6 +507,42 @@ void test_thresholdOtsu(void)
         1,   1,   1,   1,   1,   1,   1,   1,
     };
 
+    uint8_pixel_t src_data_test_case_03[8 * 8] =
+    {
+        1,   2,   2,   2,   3,   3,   3,   3,
+        4,   4,   4,   5,   7,   8,   8,   8,
+        9,   9,   9,   9,   9,   9,   9,   9,
+        9,   9,   9,   9,   9,   9,   9,   9,
+        9,   9,   9,   9,   9,   9,   9,   9,
+        9,   9,   9,   9,   9,   9,   9,   9,
+        9,   9,   9,   9,   9,   9,   9,   9,
+        9,   9,   9,   9,  10,  10,  10,  11,
+    };
+
+    uint8_pixel_t exp_data_test_case_05[8 * 8] =
+    {
+        1,   1,   1,   1,   1,   1,   1,   1,
+        1,   1,   1,   1,   0,   0,   0,   0,
+        0,   0,   0,   0,   0,   0,   0,   0,
+        0,   0,   0,   0,   0,   0,   0,   0,
+        0,   0,   0,   0,   0,   0,   0,   0,
+        0,   0,   0,   0,   0,   0,   0,   0,
+        0,   0,   0,   0,   0,   0,   0,   0,
+        0,   0,   0,   0,   0,   0,   0,   0,
+    };
+
+    uint8_pixel_t exp_data_test_case_06[8 * 8] =
+    {
+        0,   0,   0,   0,   0,   0,   0,   0,
+        0,   0,   0,   1,   1,   1,   1,   1,
+        1,   1,   1,   1,   1,   1,   1,   1,
+        1,   1,   1,   1,   1,   1,   1,   1,
+        1,   1,   1,   1,   1,   1,   1,   1,
+        1,   1,   1,   1,   1,   1,   1,   1,
+        1,   1,   1,   1,   1,   1,   1,   1,
+        1,   1,   1,   1,   1,   1,   1,   1,
+    };
+
     uint8_pixel_t dst_data[8 * 8] =
     {
         0,   0,   0,   0,   0,   0,   0,   0,
@@ -494,6 +568,8 @@ void test_thresholdOtsu(void)
          {src_data_test_case_01, exp_data_test_case_02, BRIGHTNESS_BRIGHT},
          {src_data_test_case_02, exp_data_test_case_03, BRIGHTNESS_DARK},
          {src_data_test_case_02, exp_data_test_case_04, BRIGHTNESS_BRIGHT},
+         {src_data_test_case_03, exp_data_test_case_05, BRIGHTNESS_DARK},
+         {src_data_test_case_03, exp_data_test_case_06, BRIGHTNESS_BRIGHT},
      };
 
      // Prepare images
