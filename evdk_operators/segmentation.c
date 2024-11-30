@@ -72,20 +72,15 @@ void threshold(const image_t *src, image_t *dst,
     ASSERT(src->cols != dst->cols, "src and dst have different number of columns");
     ASSERT(src->rows != dst->rows, "src and dst have different number of rows");
 
-    // Loop all pixels
-    for(int32_t y=0; y<src->rows; y++)
-    {
-        for(int32_t x=0; x<src->cols; x++)
-        {
-            // Get the pixel from the original image and modify brightness
-            uint8_pixel_t p = getUint8Pixel(src, x, y);
+    uint32_t i = src->rows * src->cols;
+    uint8_pixel_t *s = (uint8_pixel_t *)src->data;
+    uint8_pixel_t *d = (uint8_pixel_t *)dst->data;
 
-            // Verify if the value is within the thresholding window
-            if((p >= min) && (p <= max))
-                setUint8Pixel(dst, x, y, 1);
-            else
-                setUint8Pixel(dst, x, y, 0);
-        }
+    // Loop all pixels and set to 1 if the pixel is within thresholding window
+    while(i-- > 0)
+    {
+        uint8_pixel_t pixel = *s++;
+        *d++ = ((pixel >= min) && (pixel <= max)) ? 1 : 0;
     }
 }
 
