@@ -364,6 +364,42 @@ void test_threshold2Means(void)
         1,   1,   1,   1,   1,   1,   1,   1,
     };
 
+    uint8_pixel_t src_data_test_case_04[8 * 8] =
+    {
+         1,   1,   2,   3,   4,   5,   6,   7,
+         8,   9,  10,  11,  12,  13,  14,  15,
+        16,  17,  18,  19,  20,  21,  22,  23,
+        24,  25,  26,  27,  28,  29,  30,  31,
+        32,  33,  34,  35,  36,  37,  38,  39,
+        40,  41,  42,  43,  44,  45,  46,  47,
+        48,  48,  48,  48,  48,  48,  48,  48,
+        48,  48,  48,  48,  48,  48,  48,  48,
+    };
+
+    uint8_pixel_t exp_data_test_case_07[8 * 8] =
+    {
+        1,   1,   1,   1,   1,   1,   1,   1,
+        1,   1,   1,   1,   1,   1,   1,   1,
+        1,   1,   1,   1,   1,   1,   1,   1,
+        1,   1,   1,   1,   1,   0,   0,   0,
+        0,   0,   0,   0,   0,   0,   0,   0,
+        0,   0,   0,   0,   0,   0,   0,   0,
+        0,   0,   0,   0,   0,   0,   0,   0,
+        0,   0,   0,   0,   0,   0,   0,   0,
+    };
+
+    uint8_pixel_t exp_data_test_case_08[8 * 8] =
+    {
+        0,   0,   0,   0,   0,   0,   0,   0,
+        0,   0,   0,   0,   0,   0,   0,   0,
+        0,   0,   0,   0,   0,   0,   0,   0,
+        0,   0,   0,   0,   1,   1,   1,   1,
+        1,   1,   1,   1,   1,   1,   1,   1,
+        1,   1,   1,   1,   1,   1,   1,   1,
+        1,   1,   1,   1,   1,   1,   1,   1,
+        1,   1,   1,   1,   1,   1,   1,   1,
+    };
+
     uint8_pixel_t dst_data[8 * 8] =
     {
         0,   0,   0,   0,   0,   0,   0,   0,
@@ -391,6 +427,8 @@ void test_threshold2Means(void)
          {src_data_test_case_02, exp_data_test_case_04, BRIGHTNESS_BRIGHT},
          {src_data_test_case_03, exp_data_test_case_05, BRIGHTNESS_DARK},
          {src_data_test_case_03, exp_data_test_case_06, BRIGHTNESS_BRIGHT},
+         {src_data_test_case_04, exp_data_test_case_07, BRIGHTNESS_DARK},
+         {src_data_test_case_04, exp_data_test_case_08, BRIGHTNESS_BRIGHT},
      };
 
      // Prepare images
