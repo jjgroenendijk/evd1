@@ -354,7 +354,7 @@ void test_convolve(void)
         0,   0,  -2,   5,   5,  -2,   0,   0,
         0,   0,  -1,  -2,  -2,  -1,   0,   0,
         0,   0,   0,   0,   0,   0,   0,   0,
-        0,   0,   0,   0,   0,   0,   0,   0
+        0,   0,   0,   0,   0,   0,   0,   0,
     };
 
     int16_pixel_t exp_data_test_case_0202[8 * 8] =
@@ -367,6 +367,56 @@ void test_convolve(void)
         0,   0,   0,  -1,  -1,   0,   0,   0,
         0,   0,   0,   0,   0,   0,   0,   0,
         0,   0,   0,   0,   0,   0,   0,   0,
+    };
+
+    int16_pixel_t src_data_test_case_03[8 * 8] =
+    {
+        0,   0,   0,   0,   0,   0,   0,   0,
+        0,   0,   0,   0,   0,   0,   0,   0,
+        0,   0,   0,   0,   0,   0,   0,   0,
+        0,   0,   0,   1,   1,   0,   0,   0,
+        0,   0,   0,   1,   1,   0,   0,   0,
+        0,   0,   0,   0,   0,   0,   0,   0,
+        0,   0,   0,   0,   0,   0,   0,   0,
+        0,   0,   0,   0,   0,   0,   0,   0,
+    };
+
+    int16_pixel_t msk_data_test_case_0301[3 * 3] =
+    {
+        1,  1,  1,
+        0,  0,  0,
+        0,  0,  0,
+    };
+
+    int16_pixel_t msk_data_test_case_0302[3 * 3] =
+    {
+         0,  0, -1,
+         0,  0, -1,
+        -1, -1, -1,
+    };
+
+    int16_pixel_t exp_data_test_case_0301[8 * 8] =
+    {
+        0,     0,     0,     0,     0,     0,     0,     0,
+        0,     0,     0,     0,     0,     0,     0,     0,
+        0,     0,     1,     2,     2,     1,     0,     0,
+        0,     0,     1,     2,     2,     1,     0,     0,
+        0,     0,     0,     0,     0,     0,     0,     0,
+        0,     0,     0,     0,     0,     0,     0,     0,
+        0,     0,     0,     0,     0,     0,     0,     0,
+        0,     0,     0,     0,     0,     0,     0,     0,
+    };
+
+    int16_pixel_t exp_data_test_case_0302[8 * 8] =
+    {
+        0,     0,     0,     0,     0,     0,     0,     0,
+        0,     0,     0,     0,     0,     0,     0,     0,
+        0,     0,     0,     0,    -1,    -1,     0,     0,
+        0,     0,     0,     0,    -2,    -2,     0,     0,
+        0,     0,    -1,    -2,    -3,    -2,     0,     0,
+        0,     0,    -1,    -2,    -2,    -1,     0,     0,
+        0,     0,     0,     0,     0,     0,     0,     0,
+        0,     0,     0,     0,     0,     0,     0,     0,
     };
 
     int16_pixel_t dst_data[8 * 8] =
@@ -396,6 +446,8 @@ void test_convolve(void)
         {src_data_test_case_01, exp_data_test_case_0102,msk_data_test_case_0102},
         {src_data_test_case_02, exp_data_test_case_0201,msk_data_test_case_0201},
         {src_data_test_case_02, exp_data_test_case_0202,msk_data_test_case_0202},
+        {src_data_test_case_03, exp_data_test_case_0301,msk_data_test_case_0301},
+        {src_data_test_case_03, exp_data_test_case_0302,msk_data_test_case_0302},
     };
 
     // Prepare images
@@ -543,6 +595,56 @@ void test_convolveFast(void)
         0,   0,   0,   0,   0,   0,   0,   0,
     };
 
+    int16_pixel_t src_data_test_case_03[8 * 8] =
+    {
+        0,   0,   0,   0,   0,   0,   0,   0,
+        0,   0,   0,   0,   0,   0,   0,   0,
+        0,   0,   0,   0,   0,   0,   0,   0,
+        0,   0,   0,   1,   1,   0,   0,   0,
+        0,   0,   0,   1,   1,   0,   0,   0,
+        0,   0,   0,   0,   0,   0,   0,   0,
+        0,   0,   0,   0,   0,   0,   0,   0,
+        0,   0,   0,   0,   0,   0,   0,   0,
+    };
+
+    int16_pixel_t msk_data_test_case_0301[3 * 3] =
+    {
+        1,  1,  1,
+        0,  0,  0,
+        0,  0,  0,
+    };
+
+    int16_pixel_t msk_data_test_case_0302[3 * 3] =
+    {
+        0,  0, -1,
+        0,  0, -1,
+        -1, -1, -1,
+    };
+
+    int16_pixel_t exp_data_test_case_0301[8 * 8] =
+    {
+        0,     0,     0,     0,     0,     0,     0,     0,
+        0,     0,     0,     0,     0,     0,     0,     0,
+        0,     0,     1,     2,     2,     1,     0,     0,
+        0,     0,     1,     2,     2,     1,     0,     0,
+        0,     0,     0,     0,     0,     0,     0,     0,
+        0,     0,     0,     0,     0,     0,     0,     0,
+        0,     0,     0,     0,     0,     0,     0,     0,
+        0,     0,     0,     0,     0,     0,     0,     0,
+    };
+
+    int16_pixel_t exp_data_test_case_0302[8 * 8] =
+    {
+        0,     0,     0,     0,     0,     0,     0,     0,
+        0,     0,     0,     0,     0,     0,     0,     0,
+        0,     0,     0,     0,    -1,    -1,     0,     0,
+        0,     0,     0,     0,    -2,    -2,     0,     0,
+        0,     0,    -1,    -2,    -3,    -2,     0,     0,
+        0,     0,    -1,    -2,    -2,    -1,     0,     0,
+        0,     0,     0,     0,     0,     0,     0,     0,
+        0,     0,     0,     0,     0,     0,     0,     0,
+    };
+
     int16_pixel_t dst_data[8 * 8] =
     {
         0,   0,   0,   0,   0,   0,   0,   0,
@@ -570,6 +672,8 @@ void test_convolveFast(void)
         {src_data_test_case_01, exp_data_test_case_0102,msk_data_test_case_0102},
         {src_data_test_case_02, exp_data_test_case_0201,msk_data_test_case_0201},
         {src_data_test_case_02, exp_data_test_case_0202,msk_data_test_case_0202},
+        {src_data_test_case_03, exp_data_test_case_0301,msk_data_test_case_0301},
+        {src_data_test_case_03, exp_data_test_case_0302,msk_data_test_case_0302},
     };
 
     // Prepare images
