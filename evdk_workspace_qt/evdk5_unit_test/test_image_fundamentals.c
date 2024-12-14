@@ -485,7 +485,7 @@ void test_convolve(void)
 #endif
 
         // Verify the result
-        TEST_ASSERT_EQUAL_uint8_pixel_t_ARRAY_MESSAGE(exp.data, dst.data, (exp.cols * exp.rows), name);
+        TEST_ASSERT_EQUAL_int16_pixel_t_ARRAY_MESSAGE(exp.data, dst.data, (exp.cols * exp.rows), name);
         TEST_ASSERT_EQUAL_MESSAGE(exp.type, dst.type, name);
         TEST_ASSERT_EQUAL_MESSAGE(exp.cols, dst.cols, name);
         TEST_ASSERT_EQUAL_MESSAGE(exp.rows, dst.rows, name);
@@ -540,8 +540,8 @@ void test_convolveFast(void)
         0,   4,   2,   2,   2,   2,   4,   0,
         0,   6,   3,   3,   3,   3,   6,   0,
         0,   8,   4,   4,   4,   4,   8,   0,
-        0,  10,   5,   5,   5,   5,   0,   0,
-        0,  19,  13,  13,   3,   3,   9,   0,
+        0,  10,   5,   5,   5,   5,  10,   0,
+        0,  19,  13,  13,  13,  13,  19,   0,
         0,   0,   0,   0,   0,   0,   0,   0,
     };
 
@@ -711,7 +711,7 @@ void test_convolveFast(void)
 #endif
 
         // Verify the result
-        TEST_ASSERT_EQUAL_uint8_pixel_t_ARRAY_MESSAGE(exp.data, dst.data, (exp.cols * exp.rows), name);
+        TEST_ASSERT_EQUAL_int16_pixel_t_ARRAY_MESSAGE(exp.data, dst.data, (exp.cols * exp.rows), name);
         TEST_ASSERT_EQUAL_MESSAGE(exp.type, dst.type, name);
         TEST_ASSERT_EQUAL_MESSAGE(exp.cols, dst.cols, name);
         TEST_ASSERT_EQUAL_MESSAGE(exp.rows, dst.rows, name);
