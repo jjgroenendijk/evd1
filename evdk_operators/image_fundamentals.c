@@ -1672,17 +1672,51 @@ void convolve(const image_t *src, image_t *dst, const image_t *msk)
  */
 void convolveFast(const image_t *src, image_t *dst, const image_t *msk)
 {
-    // ********************************************
-    // Remove this block when implementation starts
-    #warning TODO: convolveFast
+    // Init pointers
+    int16_pixel_t *sourcePixel      = (int16_pixel_t *)src->data;
+    int16_pixel_t *destinationPixel = (int16_pixel_t *)dst->data;
+    int16_pixel_t *maskPixel        = (int16_pixel_t *)msk->data;
 
-    // Added to prevent compiler warnings
-    (void)src;
-    (void)dst;
-    (void)msk;
+    int32_t width = src->cols;
+    int32_t height = src->rows;
 
-    return;
-    // ********************************************
+    // Loop through all pixels, ignoring border pixels
+    for (int32_t x = 1; x < width - 1; x++)
+    {
+        for (int32_t y = 1; y < height - 1; y++)
+        {
+
+            int32_t pixelValue = 0;
+
+            // Images are stored in memory as a single 1D array.
+            // Accessing the pixel at (x, y) is done by calculating the offset
+            // Formula: offset = y * width + x
+
+            // Calculate the offset for the current pixel
+            pixelValue +=   sourcePixel[(y + 1) * width + (x + 1)] * maskPixel[0] +
+                            sourcePixel[(y + 1) * width + (x    )] * maskPixel[1] +
+                            sourcePixel[(y + 1) * width + (x - 1)] * maskPixel[2] +
+                            sourcePixel[(y    ) * width + (x + 1)] * maskPixel[3] +
+                            sourcePixel[(y    ) * width + (x    )] * maskPixel[4] +
+                            sourcePixel[(y    ) * width + (x - 1)] * maskPixel[5] +
+                            sourcePixel[(y - 1) * width + (x + 1)] * maskPixel[6] +
+                            sourcePixel[(y - 1) * width + (x    )] * maskPixel[7] +
+                            sourcePixel[(y - 1) * width + (x - 1)] * maskPixel[8];
+
+            // Clip the result
+            if (pixelValue > INT16_PIXEL_MAX)
+            {
+                pixelValue = INT16_PIXEL_MAX;
+            }
+            if (pixelValue < INT16_PIXEL_MIN)
+            {
+                pixelValue = INT16_PIXEL_MIN;
+            }
+
+            // Store the result
+            destinationPixel[y * width + x] = (int16_pixel_t)pixelValue;
+        }
+    }
 }
 
 /*!
