@@ -321,17 +321,80 @@ void threshold2Means(const image_t *src, image_t *dst, const eBrightness b)
  */
 void thresholdOtsu(const image_t *src, image_t *dst, const eBrightness b)
 {
-    // ********************************************
-    // Remove this block when implementation starts
-    #warning TODO: thresholdOtsu
+    // Init variables and pointers
+    uint8_pixel_t *sourcePixel = (uint8_pixel_t *)src->data;
+    uint8_pixel_t *destinationPixel = (uint8_pixel_t *)dst->data;
 
-    // Added to prevent compiler warnings
-    (void)src;
-    (void)dst;
-    (void)b;
+    uint32_t histogram[256] = {0};
+    uint32_t pixelAmount = src->rows * src->cols;
+    uint32_t pixelSum = 0;
+    uint32_t backgroundSum = 0;
+    uint32_t backgroundWeight = 0;
+    uint32_t foregroundWeight = 0;
 
-    return;
-    // ********************************************
+    float maxVariance = 0.0;
+    uint8_pixel_t optimalThreshold = 0;
+
+    // Calculate histogram and sum of all pixel values
+    for (uint32_t i = 0; i < pixelAmount; i++)
+    {
+        pixelSum += sourcePixel[i];
+        histogram[sourcePixel[i]]++;
+    }
+
+    // Check all possible thresholds (0-255)
+    for (uint32_t threshold = 0; threshold < 256; threshold++)
+    {
+        // Calculate weights
+        backgroundWeight += histogram[threshold];
+
+        foregroundWeight = pixelAmount - backgroundWeight;
+
+        // Update background sum
+        backgroundSum += threshold * histogram[threshold];
+
+        // Calculate mean values for background and foreground
+        float meanBackground = (float)backgroundSum / backgroundWeight;
+        float meanForeground = (float)(pixelSum - backgroundSum) / foregroundWeight;
+
+        // Calculate Between Class Variance
+        float varianceBetween = (float)backgroundWeight * (float)foregroundWeight * 
+                               (meanBackground - meanForeground) * (meanBackground - meanForeground);
+
+        // Check if new maximum found
+        if (varianceBetween > maxVariance)
+        {
+            maxVariance = varianceBetween;
+            optimalThreshold = threshold;
+        }
+    }
+
+    // Apply the threshold to destination image
+    for (uint32_t i = 0; i < pixelAmount; i++)
+    {
+        if (b == BRIGHTNESS_DARK)
+        {
+            if (sourcePixel[i] <= optimalThreshold)
+            {
+                destinationPixel[i] = 1;
+            }
+            else
+            {
+                destinationPixel[i] = 0;
+            }
+        }
+        else
+        {
+            if (sourcePixel[i] >= optimalThreshold)
+            {
+                destinationPixel[i] = 1;
+            }
+            else
+            {
+                destinationPixel[i] = 0;
+            }
+        }
+    }
 }
 
 /*!
