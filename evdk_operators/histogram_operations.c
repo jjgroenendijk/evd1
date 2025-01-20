@@ -145,20 +145,68 @@ void brightness(const image_t *src, image_t *dst, const int32_t brightness)
  * \param[out] dst      A pointer to the destination image
  * \param[in]  contrast New distance to the average pixel value
  *
- * \todo Implement this function
+ * 
  */
 void contrast(const image_t *src, image_t *dst, const float contrast)
 {
-    // ********************************************
-    // Remove this block when implementation starts
-    #warning TODO: contrast
+    // Verify image validity (copied from scale function)
+    ASSERT(src == NULL, "src image is invalid");
+    ASSERT(dst == NULL, "dst image is invalid");
+    ASSERT(src->type != IMGTYPE_UINT8, "src type is invalid");
+    ASSERT(dst->type != IMGTYPE_UINT8, "dst type is invalid");
+    ASSERT(src->data == NULL, "src data is invalid");
+    ASSERT(dst->data == NULL, "dst data is invalid");
 
-    // Added to prevent compiler warnings
+    // Verify image consistency (copied from scale function)
+    ASSERT(src->cols != dst->cols, "src and dst have different number of columns");
+    ASSERT(src->rows != dst->rows, "src and dst have different number of rows");
 
-    (void)src;
-    (void)dst;
-    (void)contrast;
+    // Init sum and average variables
+    uint32_t pixelValueSum = 0;
+    float pixelValueAverage = 0;
 
-    return;
-    // ********************************************
+    // Calculate amount of pixels in frame
+    uint32_t height =  src->rows;
+    uint32_t width = src->cols;
+    uint32_t pixelAmount = height * width;
+
+    // Loop all pixels and calculate the sum of all pixel values
+    for (uint32_t x = 0; x < width; x++)
+    {
+        for (uint32_t y = 0; y < height; y++)
+        {
+            // Get the pixel value
+            uint8_pixel_t pixelValue = getUint8Pixel(src, x, y);
+
+            // Add the pixel value to the sum
+            pixelValueSum += pixelValue;
+
+        }
+    }
+
+
+    // Avoid division by zero. Check if there are pixels in the frame
+    if (pixelAmount == 0) return;
+
+    // Calculate the average pixel value
+    pixelValueAverage = (float)pixelValueSum / (float)pixelAmount;
+
+    // Loop through all pixels and apply the contrast formula
+    for (uint32_t x = 0; x < width; x++)
+    {
+        for (uint32_t y = 0; y < height; y++)
+        {
+            // Get the old pixel value
+            float oldPixelValue = (float) getUint8Pixel(src, x, y);
+
+            float newPixelValue = contrast * (oldPixelValue - pixelValueAverage) + pixelValueAverage;
+
+            // Clip the result
+            if(newPixelValue > 255) { newPixelValue = 255;}
+            if (newPixelValue < 0)  { newPixelValue = 0;  }
+
+            // Set the new pixel value
+            setUint8Pixel(dst, x, y, (uint8_pixel_t)newPixelValue);
+        }
+    }
 }

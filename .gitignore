@@ -15,3 +15,10 @@ evdk_workspace_mcuxpresso/**/.default_mex
 evdk_workspace_mcuxpresso/**/*.launch
 evdk_workspace_mcuxpresso/**/*.jlink
 evdk_workspace_qt/**/*.pro.user
+
+*/.cache
+evdk_workspace_qt/evdk5_unit_test/build/Desktop-Debug
+evdk_workspace_qt/evdk5_webcam/build/Desktop_Qt_6_5_3_MinGW_64_bit-Debug
+evdk_workspace_qt/evdk5_webcam/build/Desktop_Qt_6_7_3_MinGW_64_bit-Debug
+*.autosave
+evdk_workspace_qt/evdk5_webcam/build/Desktop-Debug
