@@ -66,7 +66,63 @@ clearUint8Image_cm33:
         // r15   : Program Counter
 
 
-		// \todo Implement this function
+		
 
+		// Save callee-saved registers
+		PUSH    {r4-r11, lr}
 
-        BX lr
+	    // r0 = pointer to image_t
+	    // image_t layout:
+	    //   offset  0: cols (int32_t)
+	    //   offset  4: rows (int32_t)
+	    //   offset  8: type (eImageType) (unused here)
+	    //   offset 12: data pointer (uint8_t*)
+
+	    // Load cols from offset 0 into register r4
+	    // r4 = image->cols
+	    LDR     r4, [r0, #0]
+
+	    // Load rows from offset 4 into register r1
+	    // r1 = image->rows
+	    LDR     r1, [r0, #4]
+
+	    // Multiply cols * rows = amount of pixels. Save in r1
+	    // r1 = r4 * r1
+	    MUL     r1, r4, r1
+
+	    // Load data pointer from offset 12 into register r0
+	    // r0 = image->data
+	    LDR     r0, [r0, #12]
+
+	    // Clear registers r4-r11
+	    MOV     r4,  #0
+	    MOV     r5,  #0
+	    MOV     r6,  #0
+	    MOV     r7,  #0
+	    MOV     r8,  #0
+	    MOV     r9,  #0
+	    MOV     r10, #0
+	    MOV     r11, #0
+
+	LOOP_START:
+
+		// STMIA = "Store Multiple, Increment After."
+     	// Takes the address in r0
+     	// Stores the contents of r4, r5, r6, r7, r8, r9, r10, and r11 at that address
+		// After each register is stored, r0 is incremented by 4 bytes.
+		// So after 8 registers, r0 has moved forward by 32 bytes.
+
+		// Store r4-r11 at r0
+	    STMIA   r0!, {r4-r11}
+
+		// Subtract 32 from r1 (number of written pixels)
+	    SUBS    r1, r1, #32
+
+	    // If r1 is not zero, jump to LOOP_START
+	    BNE     LOOP_START
+
+	    // Restore callee-saved registers
+	    POP     {r4-r11, lr}
+
+	    // Return
+	    BX      lr
