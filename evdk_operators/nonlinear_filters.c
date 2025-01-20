@@ -79,9 +79,9 @@ void harmonic(const image_t *src, image_t *dst, const uint8_t n)
                 for(int32_t i=-n/2; i<=n/2; i++)
                 {
                     if((x+i) >= 0 &&
-                       (y+j) >= 0 &&
-                       (x+i) <  src->cols &&
-                       (y+j) <  src->rows)
+                        (y+j) >= 0 &&
+                        (x+i) <  src->cols &&
+                        (y+j) <  src->rows)
                     {
                         // Count the number of valid cells
                         cnt++;
@@ -157,9 +157,9 @@ void maximum(const image_t *src, image_t *dst, const uint8_t n)
                 for(int32_t i=-n/2; i<=n/2; i++)
                 {
                     if((x+i) >= 0 &&
-                       (y+j) >= 0 &&
-                       (x+i) <  src->cols &&
-                       (y+j) <  src->rows)
+                        (y+j) >= 0 &&
+                        (x+i) <  src->cols &&
+                        (y+j) <  src->rows)
                     {
                         // Calculation for each window cell
                         uint8_pixel_t p = getUint8Pixel(src,x+i,y+j);
@@ -216,9 +216,9 @@ void mean(const image_t *src, image_t *dst, const uint8_t n)
                 for(int32_t i=-n/2; i<=n/2; i++)
                 {
                     if((x+i) >= 0 &&
-                       (y+j) >= 0 &&
-                       (x+i) <  src->cols &&
-                       (y+j) <  src->rows)
+                        (y+j) >= 0 &&
+                        (x+i) <  src->cols &&
+                        (y+j) <  src->rows)
                     {
                         // Count the number of valid pixels
                         cnt++;
@@ -247,16 +247,41 @@ void mean(const image_t *src, image_t *dst, const uint8_t n)
  */
 void meanFast(const image_t *src, image_t *dst)
 {
-    // ********************************************
-    // Remove this block when implementation starts
-    #warning TODO: meanFast
+    // Init pointers
+    uint8_pixel_t *sourcePixel      = (uint8_pixel_t *)src->data;
+    uint8_pixel_t *destinationPixel = (uint8_pixel_t *)dst->data;
 
-    // Added to prevent compiler warnings
-    (void)src;
-    (void)dst;
+    int32_t width = src->cols;
+    int32_t height = src->rows;
+
+    // Loop all pixels
+    for (int32_t y = 1; y < height - 1; y++)
+    {
+        for (int32_t x = 1; x < width - 1; x++)
+        {
+            // init variable to store the sum
+            int32_t sum = 0;
+
+            // Calculate the offset for the current pixel
+            sum +=  sourcePixel[(y + 1) * width + (x + 1)] +
+                    sourcePixel[(y + 1) * width + (x    )] +
+                    sourcePixel[(y + 1) * width + (x - 1)] +
+                    sourcePixel[(y    ) * width + (x + 1)] +
+                    sourcePixel[(y    ) * width + (x    )] +
+                    sourcePixel[(y    ) * width + (x - 1)] +
+                    sourcePixel[(y - 1) * width + (x + 1)] +
+                    sourcePixel[(y - 1) * width + (x    )] +
+                    sourcePixel[(y - 1) * width + (x - 1)];
+
+            // Calculate the average (mean) and store the result
+            float mean = (float)sum / 9.0f + 0.5f;
+
+            // Set the destination pixel
+            destinationPixel[y * width + x] = (uint8_pixel_t)mean;
+        }
+    }
 
     return;
-    // ********************************************
 }
 
 /*!
@@ -307,9 +332,9 @@ void median(const image_t *src, image_t *dst, const uint8_t n)
                 for(int32_t i=-n/2; i<=n/2; i++)
                 {
                     if((x+i) >= 0 &&
-                       (y+j) >= 0 &&
-                       (x+i) <  src->cols &&
-                       (y+j) <  src->rows)
+                        (y+j) >= 0 &&
+                        (x+i) <  src->cols &&
+                        (y+j) <  src->rows)
                     {
                         // Store pixel value in array
                         median[cnt] = getUint8Pixel(src,x+i,y+j);
@@ -393,9 +418,9 @@ void midpoint(const image_t *src, image_t *dst, const uint8_t n)
                 for(int32_t i=-n/2; i<=n/2; i++)
                 {
                     if((x+i) >= 0 &&
-                       (y+j) >= 0 &&
-                       (x+i) <  src->cols &&
-                       (y+j) <  src->rows)
+                        (y+j) >= 0 &&
+                        (x+i) <  src->cols &&
+                        (y+j) <  src->rows)
                     {
                         // Calculation for each window cell
                         uint8_pixel_t p = getUint8Pixel(src,x+i,y+j);
@@ -450,9 +475,9 @@ void minimum(const image_t *src, image_t *dst, const uint8_t n)
                 for(int32_t i=-n/2; i<=n/2; i++)
                 {
                     if((x+i) >= 0 &&
-                       (y+j) >= 0 &&
-                       (x+i) <  src->cols &&
-                       (y+j) <  src->rows)
+                        (y+j) >= 0 &&
+                        (x+i) <  src->cols &&
+                        (y+j) <  src->rows)
                     {
                         // Calculation for each window cell
                         uint8_pixel_t p = getUint8Pixel(src,x+i,y+j);
@@ -507,9 +532,9 @@ void range(const image_t *src, image_t *dst, const uint8_t n)
                 for(int32_t i=-n/2; i<=n/2; i++)
                 {
                     if((x+i) >= 0 &&
-                       (y+j) >= 0 &&
-                       (x+i) <  src->cols &&
-                       (y+j) <  src->rows)
+                        (y+j) >= 0 &&
+                        (x+i) <  src->cols &&
+                        (y+j) <  src->rows)
                     {
                         // Calculation for each window cell
                         uint8_pixel_t p = getUint8Pixel(src,x+i,y+j);
