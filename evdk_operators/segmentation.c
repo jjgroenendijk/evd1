@@ -181,18 +181,126 @@ void thresholdOptimum(const image_t *src, image_t *dst, const eBrightness b)
  */
 void threshold2Means(const image_t *src, image_t *dst, const eBrightness b)
 {
-    // ********************************************
-    // Remove this block when implementation starts
-    #warning TODO: threshold2Means
+    // Init pointers
+    uint8_t *sourcePixel = (uint8_t *)src->data;
+    uint8_t *destinationPixel = (uint8_t *)dst->data;
+    uint32_t pixelAmount = src->cols * src->rows;
 
-    // Added to prevent compiler warnings
+    // Init variables
+    uint32_t newThreshold = 0;
+    uint32_t maxIterations = 32;
+    uint32_t iteration = 0;
+    uint32_t consecutiveMatches = 0;
+    float mean1 = 0.0f;
+    float mean2 = 255.0f;
 
-    (void)src;
-    (void)dst;
-    (void)b;
+    // Calculate an initial threshold guess
+    uint32_t pixelSum = 0;
 
-    return;
-    // ********************************************
+    for (uint32_t i = 0; i < pixelAmount; i++)
+    {
+        pixelSum += sourcePixel[i];
+    }
+
+    uint32_t threshold = pixelSum / pixelAmount;
+
+    // Loop until the threshold are the same for two runs, or until max iterations
+    while (iteration < maxIterations)
+    {
+        uint32_t sum1 = 0;
+        uint32_t sum2 = 0;
+        uint32_t count1 = 0;
+        uint32_t count2 = 0;
+
+        // Partition pixels into two clusters
+        for (uint32_t i = 0; i < pixelAmount; i++)
+        {
+            // printf("pixel %d has value %d\n", i, sourcePixel[i]);
+            // printf("threshold is now: %d\n", threshold);
+
+            if (sourcePixel[i] <= threshold)
+            {
+                sum1 += sourcePixel[i];
+                count1++;
+            }
+            else
+            {
+                sum2 += sourcePixel[i];
+                count2++;
+            }
+        }
+
+        // Calculate means for both clusters
+        if (count1 == 0)
+        {
+            mean1 = (float)threshold;
+        }
+        else
+        {
+            mean1 = (float)(sum1 / count1);
+        }
+
+        if (count2 == 0)
+        {
+            mean2 = (float)threshold;
+        }
+        else
+        {
+            mean2 = (float)(sum2 / count2);
+        }
+
+        // Calculate new threshold
+        newThreshold = (uint32_t)((mean1 + mean2) / 2.0f);
+
+        // printf("count1: %03d\tcount2: %03d\tmean1: %0f\tmean2: %0f\tthreshold: %03d\tnewThreshold: %03d\n", count1, count2, mean1, mean2, threshold, newThreshold);
+
+        // Check if threshold has been the same for 2 runs
+        if (newThreshold == threshold)
+        {
+            consecutiveMatches++;
+            if (consecutiveMatches == 2)
+            {
+                break;
+            }
+        }
+        else
+        {
+            consecutiveMatches = 0;
+        }
+
+        threshold = newThreshold;
+
+        iteration++;
+    }
+
+    // Apply the threshold to destination image
+    for (uint32_t i = 0; i < pixelAmount; i++)
+    {
+        if (b == BRIGHTNESS_DARK)
+        {
+            // For dark objects, set pixels below threshold to 1
+            if (sourcePixel[i] <= threshold)
+            {
+                destinationPixel[i] = 1;
+            }
+            else
+            {
+                destinationPixel[i] = 0;
+            }
+        }
+        else
+        {
+            // For bright objects, set pixels above threshold to 1
+            if (sourcePixel[i] >= threshold)
+            {
+                destinationPixel[i] = 1;
+            }
+            else
+            {
+                destinationPixel[i] = 0;
+            }
+        }
+    }
 }
 
 /*!
