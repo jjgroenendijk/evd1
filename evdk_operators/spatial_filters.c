@@ -64,20 +64,20 @@ void gaussianFilter_3x3(const image_t *src, image_t *dst)
 
     // Define mask
     int16_pixel_t msk_data[3 * 3] =
-    {
-        1,2,1,
-        2,4,2,
-        1,2,1,
-    };
+        {
+            1,2,1,
+            2,4,2,
+            1,2,1,
+        };
 
     // Create the mask image
     image_t msk =
-    {
-        .cols=3,
-        .rows=3,
-        .type=IMGTYPE_INT16,
-        .data=(uint8_t *)msk_data,
-    };
+        {
+            .cols=3,
+            .rows=3,
+            .type=IMGTYPE_INT16,
+            .data=(uint8_t *)msk_data,
+        };
 
     convolve(src, dst, &msk);
 }
@@ -107,22 +107,22 @@ void gaussianFilter_5x5(const image_t *src, image_t *dst)
 
     // Define mask
     int16_pixel_t msk_data[5 * 5] =
-    {
-        1, 4, 7, 4, 1,
-        4,16,26,16, 4,
-        7,26,41,26, 7,
-        4,16,26,16, 4,
-        1, 4, 7, 4, 1,
-    };
+        {
+            1, 4, 7, 4, 1,
+            4,16,26,16, 4,
+            7,26,41,26, 7,
+            4,16,26,16, 4,
+            1, 4, 7, 4, 1,
+        };
 
     // Create the mask image
     image_t msk =
-    {
-        .cols=5,
-        .rows=5,
-        .type=IMGTYPE_INT16,
-        .data=(uint8_t *)msk_data,
-    };
+        {
+            .cols=5,
+            .rows=5,
+            .type=IMGTYPE_INT16,
+            .data=(uint8_t *)msk_data,
+        };
 
     convolve(src, dst, &msk);
 }
@@ -153,20 +153,20 @@ void laplacianFilter_3x3(const image_t *src, image_t *dst)
 
     // Define mask
     int16_pixel_t msk_data[3 * 3] =
-    {
-        0,-1, 0,
-       -1, 4,-1,
-        0,-1, 0,
-    };
+        {
+            0,-1, 0,
+            -1, 4,-1,
+            0,-1, 0,
+        };
 
     // Create the mask image
     image_t msk =
-    {
-        .cols=3,
-        .rows=3,
-        .type=IMGTYPE_INT16,
-        .data=(uint8_t *)msk_data,
-    };
+        {
+            .cols=3,
+            .rows=3,
+            .type=IMGTYPE_INT16,
+            .data=(uint8_t *)msk_data,
+        };
 
     convolve(src, dst, &msk);
 }
@@ -197,22 +197,22 @@ void laplacianFilter_5x5(const image_t *src, image_t *dst)
 
     // Define mask
     int16_pixel_t msk_data[5 * 5] =
-    {
-        -1,-1,-1,-1,-1,
-        -1,-1,-1,-1,-1,
-        -1,-1,24,-1,-1,
-        -1,-1,-1,-1,-1,
-        -1,-1,-1,-1,-1,
-    };
+        {
+            -1,-1,-1,-1,-1,
+            -1,-1,-1,-1,-1,
+            -1,-1,24,-1,-1,
+            -1,-1,-1,-1,-1,
+            -1,-1,-1,-1,-1,
+        };
 
     // Create the mask image
     image_t msk =
-    {
-        .cols=5,
-        .rows=5,
-        .type=IMGTYPE_INT16,
-        .data=(uint8_t *)msk_data,
-    };
+        {
+            .cols=5,
+            .rows=5,
+            .type=IMGTYPE_INT16,
+            .data=(uint8_t *)msk_data,
+        };
 
     convolve(src, dst, &msk);
 }
@@ -248,27 +248,27 @@ void sobel(const image_t *src, image_t *mag, image_t *dir)
 
     // Define Sobel masks
     int16_pixel_t gh_msk_data[3 * 3] =
-    {
-        -1,-2,-1,
-         0, 0, 0,
-         1, 2, 1,
-    };
+        {
+            -1,-2,-1,
+            0, 0, 0,
+            1, 2, 1,
+        };
 
     int16_pixel_t gv_msk_data[3 * 3] =
-    {
-        -1, 0, 1,
-        -2, 0, 2,
-        -1, 0, 1,
-    };
+        {
+            -1, 0, 1,
+            -2, 0, 2,
+            -1, 0, 1,
+        };
 
     // Create the mask image
     image_t msk =
-    {
-        .cols=3,
-        .rows=3,
-        .type=IMGTYPE_INT16,
-        .data=NULL,
-    };
+        {
+            .cols=3,
+            .rows=3,
+            .type=IMGTYPE_INT16,
+            .data=NULL,
+        };
 
     // Create temporary images and verify memory allocation
     image_t *gh = newInt16Image(src->cols, src->rows);
@@ -338,7 +338,7 @@ void sobel(const image_t *src, image_t *mag, image_t *dir)
 
                 // PHIsobel = tan-1(Gv/Gh)
                 float_pixel_t phi = atanf(((float)getInt16Pixel(gv,x,y)) /
-                                           (float)getInt16Pixel(gh,x,y));
+                                          (float)getInt16Pixel(gh,x,y));
                 setFloatPixel(dir,x,y,phi);
             }
         }
@@ -364,14 +364,73 @@ void sobel(const image_t *src, image_t *mag, image_t *dir)
  */
 void sobelFast(const image_t *src, image_t *mag)
 {
-    // ********************************************
-    // Remove this block when implementation starts
-    #warning TODO: sobelFast
 
-    // Added to prevent compiler warnings
-    (void)src;
-    (void)mag;
+    // Define Sobel masks
+    int16_pixel_t gh_msk_data[3 * 3] =
+        {
+            -1,-2,-1,
+            0, 0, 0,
+            1, 2, 1,
+        };
 
-    return;
-    // ********************************************
+    int16_pixel_t gv_msk_data[3 * 3] =
+        {
+            -1, 0, 1,
+            -2, 0, 2,
+            -1, 0, 1,
+        };
+
+    // Create the mask image
+    image_t msk =
+        {
+            .cols=3,
+            .rows=3,
+            .type=IMGTYPE_INT16,
+            .data=NULL,
+        };
+
+    uint32_t height = src->rows;
+    uint32_t width = src->cols;
+
+    int16_t *sourcePixel = (int16_t *)src->data;
+    int16_t *destinationPixel = (int16_t *)mag->data;
+
+    // Loop all pixels
+    for (uint32_t y = 1; y < height - 1; y++)
+    {
+        for (uint32_t x = 1; x < width - 1; x++)
+        {
+            // init variable to store the sum
+            int32_t sobelX = 0;
+            int32_t sobelY = 0;
+
+            // Calculate the offset for the current pixel
+            sobelX +=  sourcePixel[(y + 1) * width + (x + 1)] * gh_msk_data[0] +
+                       sourcePixel[(y + 1) * width + (x    )] * gh_msk_data[1] +
+                       sourcePixel[(y + 1) * width + (x - 1)] * gh_msk_data[2] +
+                       sourcePixel[(y    ) * width + (x + 1)] * gh_msk_data[3] +
+                       sourcePixel[(y    ) * width + (x    )] * gh_msk_data[4] +
+                       sourcePixel[(y    ) * width + (x - 1)] * gh_msk_data[5] +
+                       sourcePixel[(y - 1) * width + (x + 1)] * gh_msk_data[6] +
+                       sourcePixel[(y - 1) * width + (x    )] * gh_msk_data[7] +
+                       sourcePixel[(y - 1) * width + (x - 1)] * gh_msk_data[8];
+
+            sobelY +=  sourcePixel[(y + 1) * width + (x + 1)] * gv_msk_data[0] +
+                       sourcePixel[(y + 1) * width + (x    )] * gv_msk_data[1] +
+                       sourcePixel[(y + 1) * width + (x - 1)] * gv_msk_data[2] +
+                       sourcePixel[(y    ) * width + (x + 1)] * gv_msk_data[3] +
+                       sourcePixel[(y    ) * width + (x    )] * gv_msk_data[4] +
+                       sourcePixel[(y    ) * width + (x - 1)] * gv_msk_data[5] +
+                       sourcePixel[(y - 1) * width + (x + 1)] * gv_msk_data[6] +
+                       sourcePixel[(y - 1) * width + (x    )] * gv_msk_data[7] +
+                       sourcePixel[(y - 1) * width + (x - 1)] * gv_msk_data[8];
+
+            // Calculate the magnitude
+            int32_t sobelZ = abs(sobelX) + abs(sobelY);
+
+            // Set the destination pixel value
+            destinationPixel[y * width + x] = (int16_t)sobelZ;
+        }
+    }
+
 }
