@@ -408,7 +408,7 @@ uint32_t labelIterative(const image_t *src, image_t *dst, const eConnected conne
  * \param[out] dst       A pointer to the destination image
  * \param[in]  connected The connectivity to determine how labels are
  *                       connected. Must be of type ::eConnected.
- * \param[in]  lutSize   The maximum number of labels to find. Is used to
+ * \param[in]  labelEquivalenceTableSize   The maximum number of labels to find. Is used to
  *                       dynamically allocate memory for the lookup table. A
  *                       lower value is faster, but is also able to find fewer
  *                       labels. The value is application dependent.
@@ -418,25 +418,197 @@ uint32_t labelIterative(const image_t *src, image_t *dst, const eConnected conne
  *         \li No unique labels in the image
  *         \li Memory allocation failed
  *         \li Lookup table is too small
- *
- * \todo Implement this function
  */
 uint32_t labelTwoPass(const image_t *src, image_t *dst,
-                      const eConnected connected, const uint32_t lutSize)
+                      const eConnected connected, const uint32_t labelEquivalenceTableSize)
 {
-    // ********************************************
-    // Remove this block when implementation starts
-    #warning TODO: labelTwoPass
+    // Verify inputs
+    if (src == NULL || dst == NULL || src->data == NULL || dst->data == NULL)
+    {
+        return 0;
+    }
 
-    // Added to prevent compiler warnings
+    // Create lookup table for label equivalences
+    uint32_t *labelEquivalenceTable = (uint32_t *)malloc(labelEquivalenceTableSize * sizeof(uint32_t));
+    if (labelEquivalenceTable == NULL)
+    {
+        return 0;
+    }
 
-    (void)src;
-    (void)dst;
-    (void)connected;
-    (void)lutSize;
+    // Initialize lookup table with index numbers
+    for (uint32_t labelIndex = 0; labelIndex < labelEquivalenceTableSize; labelIndex++)
+    {
+        labelEquivalenceTable[labelIndex] = labelIndex;
+    }
 
-    return 0;
-    // ********************************************
+    // Create local variables for efficiency
+    uint32_t width = src->cols;
+    uint32_t height = src->rows;
+    uint8_t *sourcePixel = (uint8_t *)src->data;
+    uint8_t *destinationPixel = (uint8_t *)dst->data;
+    uint32_t nextAvailableLabel = 1;
+
+    // First pass: Set border pixels to 0 and assign temporary labels
+    for (uint32_t y = 0; y < height; y++) 
+    {
+        for (uint32_t x = 0; x < width; x++)
+        {
+            uint32_t pixelPosition = y * width + x;
+            
+            // Set border pixels to 0
+            if (x == 0 || x == width-1 || y == 0 || y == height-1)
+            {
+                destinationPixel[pixelPosition] = 0;
+                continue;
+            }
+            
+            // Skip background pixels
+            if (sourcePixel[pixelPosition] == 0)
+            {
+                destinationPixel[pixelPosition] = 0;
+                continue;
+            }
+
+            uint32_t currentLabel = labelEquivalenceTableSize;
+            uint8_t hasNeighbor = 0;
+
+            // Check left neighbor
+            if (destinationPixel[pixelPosition - 1] > 0)
+            {
+                currentLabel = destinationPixel[pixelPosition - 1];
+                hasNeighbor = 1;
+            }
+
+            // Check upper neighbor 
+            if (destinationPixel[pixelPosition - width] > 0)
+            {
+                uint32_t upLabel = destinationPixel[pixelPosition - width];
+                if (hasNeighbor)
+                {
+                    if (upLabel < currentLabel)
+                    {
+                        labelEquivalenceTable[currentLabel] = upLabel;
+                        currentLabel = upLabel;
+                    }
+                    else
+                    {
+                        labelEquivalenceTable[upLabel] = currentLabel;
+                    }
+                }
+                else
+                {
+                    currentLabel = upLabel;
+                    hasNeighbor = 1;
+                }
+            }
+
+            // For 8-connectivity
+            if (connected == CONNECTED_EIGHT)
+            {
+                // Check upper-left diagonal
+                if (destinationPixel[pixelPosition - width - 1] > 0)
+                {
+                    uint32_t diagonalLabel = destinationPixel[pixelPosition - width - 1];
+                    if (hasNeighbor)
+                    {
+                        if (diagonalLabel < currentLabel)
+                        {
+                            labelEquivalenceTable[currentLabel] = diagonalLabel;
+                            currentLabel = diagonalLabel;
+                        }
+                        else
+                        {
+                            labelEquivalenceTable[diagonalLabel] = currentLabel;
+                        }
+                    }
+                    else
+                    {
+                        currentLabel = diagonalLabel;
+                        hasNeighbor = 1;
+                    }
+                }
+
+                // Check upper-right diagonal
+                if (destinationPixel[pixelPosition - width + 1] > 0)
+                {
+                    uint32_t diagonalLabel = destinationPixel[pixelPosition - width + 1];
+                    if (hasNeighbor)
+                    {
+                        if (diagonalLabel < currentLabel)
+                        {
+                            labelEquivalenceTable[currentLabel] = diagonalLabel;
+                            currentLabel = diagonalLabel;
+                        }
+                        else
+                        {
+                            labelEquivalenceTable[diagonalLabel] = currentLabel;
+                        }
+                    }
+                    else
+                    {
+                        currentLabel = diagonalLabel;
+                        hasNeighbor = 1;
+                    }
+                }
+            }
+
+            // Assign new label if no neighbors found
+            if (!hasNeighbor)
+            {
+                if (nextAvailableLabel >= labelEquivalenceTableSize)
+                {
+                    free(labelEquivalenceTable);
+                    return 0;  // labelEquivalenceTable size exceeded
+                }
+                currentLabel = nextAvailableLabel++;
+            }
+
+            destinationPixel[pixelPosition] = currentLabel;
+        }
+    }
+
+    // Flatten equivalence table
+    for (uint32_t i = 1; i < nextAvailableLabel; i++)
+    {
+        uint32_t root = i;
+        while (labelEquivalenceTable[root] != root)
+        {
+            root = labelEquivalenceTable[root];
+        }
+        labelEquivalenceTable[i] = root;
+    }
+
+    // Compact the label numbers
+    uint32_t *finalLabels = (uint32_t *)calloc(nextAvailableLabel, sizeof(uint32_t));
+    if (finalLabels == NULL)
+    {
+        free(labelEquivalenceTable);
+        return 0;
+    }
+
+    uint32_t currentLabel = 1;
+    for (uint32_t i = 1; i < nextAvailableLabel; i++)
+    {
+        if (finalLabels[labelEquivalenceTable[i]] == 0)
+        {
+            finalLabels[labelEquivalenceTable[i]] = currentLabel++;
+        }
+    }
+
+    // Second pass: Replace temporary labels with final labels
+    for (uint32_t i = 0; i < width * height; i++)
+    {
+        if (destinationPixel[i] > 0)
+        {
+            destinationPixel[i] = finalLabels[labelEquivalenceTable[destinationPixel[i]]];
+        }
+    }
+
+    // Cleanup
+    free(labelEquivalenceTable);
+    free(finalLabels);
+
+    return currentLabel - 1;  // Return number of unique labels
 }
 
 /*!
@@ -641,18 +813,91 @@ float ncm(const image_t *img, const uint8_t blobnr, const int32_t p, const int32
  */
 void perimeter(const image_t *img, blobinfo_t *blobinfo, const uint32_t blobnr)
 {
-    // ********************************************
-    // Remove this block when implementation starts
-    #warning TODO: perimeter
+    // Verify image validity 
+    ASSERT(img == NULL, "img image is invalid");
+    ASSERT(img->data == NULL, "img data is invalid"); 
+    ASSERT(blobinfo == NULL, "blobinfo is invalid");
 
-    // Added to prevent compiler warnings
+    // Precomputed geometric constants
+    const float SQRT_2 = 1.41421356237f;
+    const float HALF_SQRT_5 = 1.11803398875f;
 
-    (void)img;
-    (void)blobinfo;
-    (void)blobnr;
+    // Get dimensions and pointers
+    const int32_t width = img->cols;
+    const int32_t height = img->rows;
+    const uint8_t *srcPixels = (uint8_t *)img->data;
+    const uint32_t stride = width;
 
-    return;
-    // ********************************************
+    // Allocate edge-only temporary image
+    uint8_t *edges = (uint8_t *)calloc(width * height, sizeof(uint8_t));
+    if (edges == NULL) {
+        return;
+    }
+
+    // Edge pixel detection - optimized direct memory access
+    for (int32_t y = 1; y < height-1; y++) {
+        const uint32_t rowOffset = y * stride;
+        for (int32_t x = 1; x < width-1; x++) {
+            const uint32_t pos = rowOffset + x;
+            
+            // Check if pixel belongs to blob
+            if (srcPixels[pos] == blobnr) {
+                // Optimized 4-connected neighbor check using pointer arithmetic
+                if (srcPixels[pos - 1] != blobnr ||      // Left
+                    srcPixels[pos + 1] != blobnr ||      // Right  
+                    srcPixels[pos - stride] != blobnr ||  // Up
+                    srcPixels[pos + stride] != blobnr)    // Down
+                {
+                    edges[pos] = 1;
+                }
+            }
+        }
+    }
+
+    // Initialize convolabelEquivalenceTableion kernel
+    const uint8_t kernel[9] = {
+        10, 2, 10,   // Optimized 3x3 kernel layout
+        2,  1,  2,
+        10, 2, 10
+    };
+
+    // Calculate perimeter with optimized kernel application
+    float perimeterLength = 0.0f;
+    for (int32_t y = 1; y < height-1; y++) {
+        const uint32_t rowOffset = y * stride;
+        for (int32_t x = 1; x < width-1; x++) {
+            if (edges[rowOffset + x]) {
+                // Fast kernel sum calculation using direct array access
+                uint32_t sum = 
+                    edges[(y-1)*stride + (x-1)] * kernel[0] +
+                    edges[(y-1)*stride + x] * kernel[1] +
+                    edges[(y-1)*stride + (x+1)] * kernel[2] +
+                    edges[y*stride + (x-1)] * kernel[3] +
+                    edges[y*stride + x] * kernel[4] +
+                    edges[y*stride + (x+1)] * kernel[5] +
+                    edges[(y+1)*stride + (x-1)] * kernel[6] +
+                    edges[(y+1)*stride + x] * kernel[7] +
+                    edges[(y+1)*stride + (x+1)] * kernel[8];
+
+                // Optimized contribution lookup using switch
+                switch (sum) {
+                    case 5: case 7: case 15: case 17: case 27:
+                        perimeterLength += 1.0f;
+                        break;
+                    case 21: case 33:
+                        perimeterLength += SQRT_2;
+                        break;
+                    case 13: case 23:
+                        perimeterLength += HALF_SQRT_5;
+                        break;
+                }
+            }
+        }
+    }
+
+    // Cleanup and store result
+    free(edges);
+    blobinfo->perimeter = perimeterLength;
 }
 
 /*!
