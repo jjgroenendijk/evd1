@@ -340,7 +340,7 @@ void fillHolesIterative(const image_t *src, image_t *dst, const eConnected c)
         {
             setUint8Pixel(dst,0,y,2);
         }
-        
+
         if(getUint8Pixel(dst,(dst->cols-1),y) == 0)
         {
             setUint8Pixel(dst,(dst->cols-1),y,2);
@@ -467,18 +467,228 @@ void fillHolesIterative(const image_t *src, image_t *dst, const eConnected c)
 uint32_t fillHolesTwoPass(const image_t *src, image_t *dst,
                           const eConnected connected, const uint32_t lutSize)
 {
-    // ********************************************
-    // Remove this block when implementation starts
-    #warning TODO: fillHolesTwoPass
+    // Verify input parameters
+    if (src == NULL || dst == NULL || src->data == NULL || dst->data == NULL)
+    {
+        return 0; // Invalid input images
+    }
 
-    // Added to prevent compiler warnings
-    (void)src;
-    (void)dst;
-    (void)connected;
-    (void)lutSize;
+    // Get image dimensions
+    const uint32_t width = src->cols;
+    const uint32_t height = src->rows;
+    const uint32_t imageSize = width * height;
 
-    return 0;
-    // ********************************************
+    // Allocate memory for label arrays
+    uint32_t *labelMap = (uint32_t *)malloc(imageSize * sizeof(uint32_t));
+    uint32_t *labelEquivalence = (uint32_t *)malloc(lutSize * sizeof(uint32_t));
+    uint8_t *borderFlags = (uint8_t *)malloc(lutSize * sizeof(uint8_t));
+
+    // Verify memory allocation
+    if (labelMap == NULL || labelEquivalence == NULL || borderFlags == NULL)
+    {
+        free(labelMap);
+        free(labelEquivalence);
+        free(borderFlags);
+        return 0; // Memory allocation failed
+    }
+
+    // Initialize work arrays
+    memset(labelMap, 0, imageSize * sizeof(uint32_t));
+    memset(borderFlags, 0, lutSize * sizeof(uint8_t));
+    
+    // Initialize label equivalence table
+    for (uint32_t i = 0; i < lutSize; i++)
+    {
+        labelEquivalence[i] = i;
+    }
+
+    // Get direct pixel access
+    const uint8_t *sourcePixel = (const uint8_t *)src->data;
+    uint8_t *destinationPixel = (uint8_t *)dst->data;
+    uint32_t currentLabelID = 1; // Start labeling from 1
+
+    // First pass: Label all pixels and track connected components
+    for (uint32_t y = 0; y < height; y++)
+    {
+        for (uint32_t x = 0; x < width; x++)
+        {
+            const uint32_t pixelPosition = y * width + x;
+            
+            // Skip foreground pixels
+            if (sourcePixel[pixelPosition] == 1)
+            {
+                labelMap[pixelPosition] = 0;
+                continue;
+            }
+
+            uint32_t minimalLabel = lutSize;
+            uint8_t hasConnectedNeighbor = 0;
+
+            // Check left neighbor
+            if (x > 0 && labelMap[pixelPosition - 1] > 0)
+            {
+                minimalLabel = labelMap[pixelPosition - 1];
+                hasConnectedNeighbor = 1;
+            }
+
+            // Check top neighbor
+            if (y > 0 && labelMap[pixelPosition - width] > 0)
+            {
+                const uint32_t topLabel = labelMap[pixelPosition - width];
+                if (hasConnectedNeighbor)
+                {
+                    // Track connected regions
+                    if (topLabel < minimalLabel)
+                    {
+                        labelEquivalence[minimalLabel] = topLabel;
+                        minimalLabel = topLabel;
+                    }
+                    else
+                    {
+                        labelEquivalence[topLabel] = minimalLabel;
+                    }
+                }
+                else
+                {
+                    minimalLabel = topLabel;
+                    hasConnectedNeighbor = 1;
+                }
+            }
+
+            // For 8-connected mode, check diagonal neighbors
+            if (connected == CONNECTED_EIGHT)
+            {
+                // Check top-left neighbor
+                if (x > 0 && y > 0 && labelMap[pixelPosition - width - 1] > 0)
+                {
+                    const uint32_t topLeftLabel = labelMap[pixelPosition - width - 1];
+                    if (hasConnectedNeighbor)
+                    {
+                        if (topLeftLabel < minimalLabel)
+                        {
+                            labelEquivalence[minimalLabel] = topLeftLabel;
+                            minimalLabel = topLeftLabel;
+                        }
+                        else
+                        {
+                            labelEquivalence[topLeftLabel] = minimalLabel;
+                        }
+                    }
+                    else
+                    {
+                        minimalLabel = topLeftLabel;
+                        hasConnectedNeighbor = 1;
+                    }
+                }
+                
+                // Check top-right neighbor
+                if (x < width - 1 && y > 0 && labelMap[pixelPosition - width + 1] > 0)
+                {
+                    const uint32_t topRightLabel = labelMap[pixelPosition - width + 1];
+                    if (hasConnectedNeighbor)
+                    {
+                        if (topRightLabel < minimalLabel)
+                        {
+                            labelEquivalence[minimalLabel] = topRightLabel;
+                            minimalLabel = topRightLabel;
+                        }
+                        else
+                        {
+                            labelEquivalence[topRightLabel] = minimalLabel;
+                        }
+                    }
+                    else
+                    {
+                        minimalLabel = topRightLabel;
+                        hasConnectedNeighbor = 1;
+                    }
+                }
+            }
+
+            // Assign new label if no connected neighbors found
+            if (!hasConnectedNeighbor)
+            {
+                if (currentLabelID >= lutSize)
+                {
+                    free(labelMap);
+                    free(labelEquivalence);
+                    free(borderFlags);
+                    return 0; // Label table overflow
+                }
+                minimalLabel = currentLabelID++;
+            }
+            
+            labelMap[pixelPosition] = minimalLabel;
+        }
+    }
+
+    // Resolve label equivalences
+    for (uint32_t i = 1; i < currentLabelID; i++)
+    {
+        uint32_t rootLabel = i;
+        while (labelEquivalence[rootLabel] != rootLabel)
+        {
+            rootLabel = labelEquivalence[rootLabel];
+        }
+        
+        // Update all labels to point to their root
+        uint32_t currentLabel = i;
+        while (labelEquivalence[currentLabel] != rootLabel)
+        {
+            uint32_t nextLabel = labelEquivalence[currentLabel];
+            labelEquivalence[currentLabel] = rootLabel;
+            currentLabel = nextLabel;
+        }
+    }
+
+    // Mark regions connected to image borders
+    for (uint32_t x = 0; x < width; x++)
+    {
+        if (labelMap[x] > 0)
+            borderFlags[labelEquivalence[labelMap[x]]] = 1;
+        if (labelMap[(height - 1) * width + x] > 0)
+            borderFlags[labelEquivalence[labelMap[(height - 1) * width + x]]] = 1;
+    }
+
+    for (uint32_t y = 0; y < height; y++)
+    {
+        if (labelMap[y * width] > 0)
+            borderFlags[labelEquivalence[labelMap[y * width]]] = 1;
+        if (labelMap[y * width + (width - 1)] > 0)
+            borderFlags[labelEquivalence[labelMap[y * width + (width - 1)]]] = 1;
+    }
+
+    // Second pass: Fill holes and create final image
+    for (uint32_t i = 0; i < imageSize; i++)
+    {
+        if (sourcePixel[i] == 1)
+        {
+            destinationPixel[i] = 1; // Preserve foreground pixels
+        }
+        else if (labelMap[i] > 0)
+        {
+            // Fill holes not connected to border
+            if (borderFlags[labelEquivalence[labelMap[i]]] == 0)
+            {
+                destinationPixel[i] = 1;
+            }
+            else
+            {
+                destinationPixel[i] = 0;
+            }
+        }
+        else
+        {
+            destinationPixel[i] = 0;
+        }
+    }
+
+    // Release allocated memory
+    free(labelMap);
+    free(labelEquivalence);
+    free(borderFlags);
+
+    return 1; // Success
 }
 
 /*!
@@ -504,14 +714,14 @@ void hitmiss(const image_t *src, image_t *dst, const uint8_t *m1, const uint8_t 
 
     // Verifiy mask validity
     ASSERT((m1[0] & m2[0]) == 1 ||
-           (m1[1] & m2[1]) == 1 ||
-           (m1[2] & m2[2]) == 1 ||
-           (m1[3] & m2[3]) == 1 ||
-           (m1[4] & m2[4]) == 1 ||
-           (m1[5] & m2[5]) == 1 ||
-           (m1[6] & m2[6]) == 1 ||
-           (m1[7] & m2[7]) == 1 ||
-           (m1[8] & m2[8]) == 1,
+               (m1[1] & m2[1]) == 1 ||
+               (m1[2] & m2[2]) == 1 ||
+               (m1[3] & m2[3]) == 1 ||
+               (m1[4] & m2[4]) == 1 ||
+               (m1[5] & m2[5]) == 1 ||
+               (m1[6] & m2[6]) == 1 ||
+               (m1[7] & m2[7]) == 1 ||
+               (m1[8] & m2[8]) == 1,
            " m1 AND m2 must be 0");
 
     // Verify image consistency
@@ -628,7 +838,7 @@ void removeBorderBlobsIterative(const image_t *src, image_t *dst, const eConnect
         {
             setUint8Pixel(dst,0,y,2);
         }
-        
+
         if(getUint8Pixel(dst,(dst->cols-1),y) == 1)
         {
             setUint8Pixel(dst,(dst->cols-1),y,2);
@@ -711,23 +921,298 @@ void removeBorderBlobsIterative(const image_t *src, image_t *dst, const eConnect
  *         1 Success
  *
  * \todo Implement this function
+ *
+ * TIPS
+        The argument lutSize is used to dynamically allocate memory in the removeBorderBlobsTwoPass() function for the equivalence lookup table.
+            Use the function malloc().
+            Check if the allocation succeeded by verifying if the returned pointer is not equal to NULL.
+            Use the function memset() to set the entire lookup table to zero.
+            Do not forget to use free() when the function finishes.
+        The function returns 1 on successful execution and returns 0 in case of the following failures:
+            Memory allocation for the lookup table failed
+            The lookup table is too small. In other words, the image requires more unique labels than can be stored in the lookup table.
+ *
  */
-uint32_t removeBorderBlobsTwoPass(const image_t *src, image_t *dst,
-                                  const eConnected connected,
-                                  const uint32_t lutSize)
+uint32_t removeBorderBlobsTwoPass(const image_t *src, image_t *dst, const eConnected connected, const uint32_t lutSize)
 {
-    // ********************************************
-    // Remove this block when implementation starts
-    #warning TODO: removeBorderBlobsTwoPass
+    // This function removes shapes that touch the edges of the picture.
+    // First, we check if the pictures are valid.
+    if (!src || !dst || !src->data || !dst->data)
+    {
+        return 2;
+    }
 
-    // Added to prevent compiler warnings
-    (void)src;
-    (void)dst;
-    (void)connected;
-    (void)lutSize;
+    uint32_t width = src->cols;
+    uint32_t height = src->rows;
 
-    return 0;
-    // ********************************************
+    // Get direct pointers to pixel data for faster access
+    const uint8_t *sourcePixel = (const uint8_t *)src->data;
+    uint8_t *destinationPixel = (uint8_t *)dst->data;
+
+    // We create a table of numbers to label each shape we find in the picture.
+    // Shapes touching the border get a special label, so we can remove them.
+    // Create arrays for storing labels and lookup table
+    // LUT is used to track label equivalences
+    uint32_t *labelEquivalence = (uint32_t *)calloc(lutSize, sizeof(uint32_t));
+    uint32_t *labelMap = (uint32_t *)calloc(width * height, sizeof(uint32_t));
+
+    // Check if memory allocation worked
+    if (!labelMap || !labelEquivalence)
+    {
+        free(labelEquivalence);
+        free(labelMap);
+        return 0;
+    }
+
+    // Setup initial LUT values:
+    // 1 = regular label
+    // 2 = special label for border-connected pixels
+    labelEquivalence[1] = 1;
+    labelEquivalence[2] = 2;
+    uint32_t currentLabelID = 3; // Start new labels from 3
+
+    // Mark all object pixels that touch the image borders with label 2
+    // Process top border
+    for (uint32_t x = 0; x < width; ++x)
+    {
+        if (sourcePixel[x] == 1)
+        {
+            labelMap[x] = 2;
+            destinationPixel[x] = 2;
+        }
+    }
+
+    // Process bottom border
+    for (uint32_t x = 0; x < width; ++x)
+    {
+        if (sourcePixel[(height - 1) * width + x] == 1)
+        {
+            labelMap[(height - 1) * width + x] = 2;
+            destinationPixel[(height - 1) * width + x] = 2;
+        }
+    }
+
+    // Process left border
+    for (uint32_t y = 0; y < height; ++y)
+    {
+        if (sourcePixel[y * width] == 1)
+        {
+            labelMap[y * width] = 2;
+            destinationPixel[y * width] = 2;
+        }
+    }
+
+    // Process right border
+    for (uint32_t y = 0; y < height; ++y)
+    {
+        if (sourcePixel[y * width + (width - 1)] == 1)
+        {
+            labelMap[y * width + (width - 1)] = 2;
+            destinationPixel[y * width + (width - 1)] = 2;
+        }
+    }
+
+    // We look at each pixel and see if it belongs to a shape.
+    // If it does, we check its neighbors to figure out what label we give it.
+    // First pass: Label all object pixels and track connected components
+    for (uint32_t y = 0; y < height; ++y)
+    {
+        for (uint32_t x = 0; x < width; ++x)
+        {
+
+            // Here, we calculate the position of the current pixel in the image array.
+            uint32_t pixelPosition = y * width + x;
+
+            // We also calculate the positions of neighboring pixels above and to the left (and diagonals if 8-connected).
+            uint32_t pixelUp;
+            if (y > 0)
+            {
+                pixelUp = (y - 1) * width + x;
+            }
+            else
+            {
+                pixelUp = 0;
+            }
+
+            uint32_t pixelLeft;
+            if (x > 0)
+            {
+                pixelLeft = y * width + (x - 1);
+            }
+            else
+            {
+                pixelLeft = 0;
+            }
+
+            uint32_t pixelTopLeft;
+            if (x > 0 && y > 0)
+            {
+                pixelTopLeft = (y - 1) * width + (x - 1);
+            }
+            else
+            {
+                pixelTopLeft = 0;
+            }
+
+            uint32_t pixelTopRight;
+            if (x < width - 1 && y > 0)
+            {
+                pixelTopRight = (y - 1) * width + (x + 1);
+            }
+            else
+            {
+                pixelTopRight = 0;
+            }
+
+            // Skip background pixels (value 0) because we only label object pixels.
+            if (sourcePixel[pixelPosition] == 0)
+            {
+                destinationPixel[pixelPosition] = 0;
+                continue;
+            }
+
+            // If this is the top-left corner, it has no neighbors to compare with.
+            else if (x == 0 && y == 0)
+            {
+                continue;
+            }
+
+            // Gather neighbor labels in an array so we can find the smallest label among them.
+            // This helps group pixels that belong to the same shape.
+            uint32_t neighborLabels[5] = {0};
+            int neighborCount = 0;
+
+            // Check neighbors based on connectivity type (4 or 8 connected)
+            if (y > 0)
+            {
+                neighborLabels[neighborCount++] = labelMap[pixelUp]; // Top
+            }
+
+            if (x > 0)
+            {
+                neighborLabels[neighborCount++] = labelMap[pixelLeft]; // Left
+            }
+
+            // For 8-connectivity, also check diagonal neighbors
+            if (connected == CONNECTED_EIGHT)
+            {
+                if (y > 0 && x > 0)
+                {
+                    neighborLabels[neighborCount++] = labelMap[pixelTopLeft]; // Top-left
+                }
+                if (y > 0 && x < width - 1)
+                {
+                    neighborLabels[neighborCount++] = labelMap[pixelTopRight]; // Top-right
+                }
+            }
+
+            // Include current pixel's label if it exists
+            if (labelMap[pixelPosition] != 0)
+            {
+                neighborLabels[neighborCount++] = labelMap[pixelPosition];
+            }
+
+            // We find the smallest non-background label among neighbors to unify connected shapes.
+            uint32_t minimalNeighborLabel = 0;
+            for (int i = 0; i < neighborCount; ++i)
+            {
+                if (neighborLabels[i] != 0 && neighborLabels[i] != 1)
+                {
+                    if (minimalNeighborLabel == 0 || neighborLabels[i] < minimalNeighborLabel)
+                    {
+                        minimalNeighborLabel = neighborLabels[i];
+                    }
+                }
+            }
+
+            // If we cannot find a suitable label among neighbors, create a new label if there's still room in the LUT.
+            if (minimalNeighborLabel == 0)
+            {
+                // Check if we have room for new label
+                if (currentLabelID >= lutSize)
+                {
+                    free(labelEquivalence);
+                    free(labelMap);
+                    return 5;
+                }
+
+                labelMap[pixelPosition] = currentLabelID;
+                labelEquivalence[currentLabelID] = currentLabelID;
+                destinationPixel[pixelPosition] = currentLabelID;
+                ++currentLabelID;
+            }
+            // If neighbors exist, use smallest label and update equivalences
+            else
+            {
+                labelMap[pixelPosition] = minimalNeighborLabel;
+                destinationPixel[pixelPosition] = minimalNeighborLabel;
+
+                // Update label equivalences
+                for (int i = 0; i < neighborCount; ++i)
+                {
+                    if (neighborLabels[i] != 0 && neighborLabels[i] != minimalNeighborLabel)
+                    {
+                        labelEquivalence[neighborLabels[i]] = minimalNeighborLabel;
+                    }
+                }
+
+                // We also handle the case where a shape touches the image border by assigning it label 2.
+                // This will be removed in the second pass.
+                if (minimalNeighborLabel == 2 || labelEquivalence[minimalNeighborLabel] == 2)
+                {
+                    labelEquivalence[labelMap[pixelPosition]] = 2;
+                    destinationPixel[pixelPosition] = 2;
+                }
+            }
+        }
+    }
+
+    // Resolve all label equivalences to unify shapes under a single label.
+    for (uint32_t i = 1; i < currentLabelID; ++i)
+    {
+        uint32_t labelRoot = i;
+        while (labelEquivalence[labelRoot] != labelRoot)
+        {
+            labelRoot = labelEquivalence[labelRoot];
+        }
+        labelEquivalence[i] = labelRoot;
+
+        // Make sure border connectivity is properly propagated so any label
+        // ultimately connected to label 2 also becomes label 2.
+        if (labelEquivalence[labelRoot] == 2)
+        {
+            labelEquivalence[i] = 2;
+        }
+    }
+
+    // At the end, any shape with a border label is turned into background (0).
+    // Shapes not touching the border remain as 1.
+    // Second pass: Convert labels to final binary image
+    // - Pixels connected to border (label 2) become background (0)
+    // - All other object pixels become foreground (1)
+    for (uint32_t y = 0; y < height; ++y)
+    {
+        for (uint32_t x = 0; x < width; ++x)
+        {
+            uint32_t pixelPosition = y * width + x;
+            uint32_t label = labelMap[pixelPosition];
+
+            if (labelEquivalence[label] == 2)
+            {
+                destinationPixel[pixelPosition] = 0;
+            }
+            else if (label != 0)
+            {
+                destinationPixel[pixelPosition] = 1;
+            }
+        }
+    }
+
+    // Clean up allocated memory
+    free(labelEquivalence);
+    free(labelMap);
+
+    return 1; // This means we succeeded.
 }
 
 /*!
