@@ -961,8 +961,21 @@ void clearFloatImage(image_t *img)
 void convertUyvyToUint8(image_t *src, image_t *dst)
 {
     // ********************************************
-    // Remove this block when implementation starts
-    #warning TODO: convertUyvyToUint8
+    uint32_t i = src->rows * src->cols;
+    uyvy_pixel_t *uyvy_pixel = (uyvy_pixel_t *)src->data;
+    uint8_pixel_t *uint8_pixel = (uint8_pixel_t *)dst->data;
+
+    // Loop all pixels and convert
+    while(i-- > 0)
+    {
+        *uint8_pixel = (uint8_pixel_t)((*uyvy_pixel) >> 8);
+
+        // Next pixel
+        uyvy_pixel++;
+        uint8_pixel++;
+    }
+
+
 
     // Added to prevent compiler warnings
     (void)src;
@@ -2054,14 +2067,115 @@ void scaleFloatToUint8(const image_t *src ,image_t *dst)
  */
 void scaleFast(const image_t *src, image_t *dst)
 {
-    // ********************************************
-    // Remove this block when implementation starts
-    #warning TODO: scaleFast
+    // Verify image validity (copied from scale function)
+    ASSERT(src == NULL, "src image is invalid");
+    ASSERT(dst == NULL, "dst image is invalid");
+    ASSERT(src->type != IMGTYPE_UINT8, "src type is invalid");
+    ASSERT(dst->type != IMGTYPE_UINT8, "dst type is invalid");
+    ASSERT(src->data == NULL, "src data is invalid");
+    ASSERT(dst->data == NULL, "dst data is invalid");
 
-    // Added to prevent compiler warnings
-    (void)src;
-    (void)dst;
+    // Verify image consistency (copied from scale function)
+    ASSERT(src->cols != dst->cols, "src and dst have different number of columns");
+    ASSERT(src->rows != dst->rows, "src and dst have different number of rows");
+
+    // Set start values for minimum and maximum value (copied from scale function)
+    uint8_pixel_t minPixelValue = UINT8_PIXEL_MAX;
+    uint8_pixel_t maxPixelValue = UINT8_PIXEL_MIN;
+
+    // Get amount of pixels and pointers to pixels
+    uint32_t pixelAmount = src->rows * src->cols;
+    uint32_t fourPixelsCount = pixelAmount / 4;
+    uint32_t fourPixelsLeftover   = pixelAmount % 4;
+    uint32_t *pSource32 = (uint32_t *)src->data;
+    uint8_t *pSource8;  // Declare once at the start
+
+    // Find min and max values for pixels. As inspired by EVDK sheets from H. Arends
+    while(fourPixelsCount-- > 0)
+    {
+        uint32_t fourPixels = *pSource32++;
+
+        // Extract 4 separate bytes from the 32-bit chunk
+        uint8_t pixel1 = (uint8_t)((fourPixels >>  0) & 0xFF);
+        uint8_t pixel2 = (uint8_t)((fourPixels >>  8) & 0xFF);
+        uint8_t pixel3 = (uint8_t)((fourPixels >> 16) & 0xFF);
+        uint8_t pixel4 = (uint8_t)((fourPixels >> 24) & 0xFF);
+
+        // Compare each pixel with the current min/max
+        if (pixel1 < minPixelValue) minPixelValue = pixel1;
+        if (pixel1 > maxPixelValue) maxPixelValue = pixel1;
+
+        if (pixel2 < minPixelValue) minPixelValue = pixel2;
+        if (pixel2 > maxPixelValue) maxPixelValue = pixel2;
+
+        if (pixel3 < minPixelValue) minPixelValue = pixel3;
+        if (pixel3 > maxPixelValue) maxPixelValue = pixel3;
+
+        if (pixel4 < minPixelValue) minPixelValue = pixel4;
+        if (pixel4 > maxPixelValue) maxPixelValue = pixel4;
+    }
+
+    // Handle leftover pixels
+    pSource8 = (uint8_t *)pSource32;  // Just assign, don't redeclare
+    while(fourPixelsLeftover-- > 0)
+    {
+        uint8_t pixel = *pSource8++;
+
+        if (pixel < minPixelValue) minPixelValue = pixel;
+        if (pixel > maxPixelValue) maxPixelValue = pixel;
+    }
+
+    // Prevent division by zero
+    if(maxPixelValue == minPixelValue)
+    {
+        // Scale the output to basic image type
+        uint8_pixel_t *pDestination = (uint8_pixel_t *)dst->data;
+        for(uint32_t i=0; i<pixelAmount; ++i)
+        {
+            *pDestination++ = (uint8_pixel_t)128;
+        }
 
     return;
-    // ********************************************
+    }
+
+    // Restore pointers
+    pSource32 = (uint32_t *)src->data;
+
+    // Get the scale factor
+    float scaleFactor = 255.0f / (maxPixelValue - minPixelValue);
+
+    // Process 4 pixels in parallel by casting pointers to 32-bit words
+    uint32_t *pDestination32 = (uint32_t *)dst->data;
+    fourPixelsCount = pixelAmount / 4;
+    fourPixelsLeftover = pixelAmount % 4;
+
+    while(fourPixelsCount-- > 0)
+    {
+        uint32_t fourPixels = *pSource32++;
+        
+        // Read pixel value from 32-bit source pointer
+        uint8_t pixelSource1 = fourPixels & 0xFF;          // First byte
+        uint8_t pixelSource2 = (fourPixels >> 8) & 0xFF;   // Second byte  
+        uint8_t pixelSource3 = (fourPixels >> 16) & 0xFF;  // Third byte
+        uint8_t pixelSource4 = (fourPixels >> 24) & 0xFF;  // Fourth byte
+
+        // Scale each pixel to full range
+        uint8_t pixelDest1 = ((pixelSource1 - minPixelValue) * scaleFactor) + 0.5f;
+        uint8_t pixelDest2 = ((pixelSource2 - minPixelValue) * scaleFactor) + 0.5f;
+        uint8_t pixelDest3 = ((pixelSource3 - minPixelValue) * scaleFactor) + 0.5f; 
+        uint8_t pixelDest4 = ((pixelSource4 - minPixelValue) * scaleFactor) + 0.5f;
+
+        // Combine scaled pixels back into 32-bit word
+        *pDestination32++ = (pixelDest4 << 24) | (pixelDest3 << 16) | (pixelDest2 << 8) | pixelDest1;
+    }
+
+    // Handle leftover pixels
+    pSource8 = (uint8_t *)pSource32;
+    uint8_t *pDestination8 = (uint8_t *)pDestination32;
+
+    while(fourPixelsLeftover-- > 0)
+    {
+        uint8_t pixel = *pSource8++;
+        *pDestination8++ = (uint8_t)(((pixel - minPixelValue) * scaleFactor) + 0.5f);
+    }
 }

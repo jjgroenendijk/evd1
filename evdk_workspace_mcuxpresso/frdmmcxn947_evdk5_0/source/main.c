@@ -75,6 +75,11 @@ void exampleMeanFast(void);
 void exampleFinalAssignment(void);
 void exampleThreshold2Means(void);
 void exampleThresholdOtsu(void);
+void exampleSobelFast(void);
+void exampleRemoveBorderBlobs(void);
+void exampleFillHoles(void);
+void exampleLabel(void);
+void examplePerimeter(void);
 
 #if (USB_IMAGE_TYPE_UYVY == 1)
 void exampleWebcamUyvy(void);
@@ -207,7 +212,12 @@ int main(void)
 //    exampleMeanFast();
 //    exampleFinalAssignment();
 //    exampleThreshold2Means();
-    exampleThresholdOtsu();
+//    exampleThresholdOtsu();
+//    exampleSobelFast();
+//    exampleRemoveBorderBlobs();
+//	  exampleFillHoles();
+//    exampleLabel();
+    examplePerimeter();
 
     // -------------------------------------------------------------------------
     // Should never reach this
@@ -1549,3 +1559,251 @@ void exampleThresholdOtsu(void)
     }
 }
 
+void exampleSobelFast(void)
+{
+    PRINTF("%s\r\n", __func__);
+
+    // Update SysTick to increase precision to 0.01ms (=10us)
+    uint32_t status = SysTick_Config(SystemCoreClock/100000);
+
+    if(status != 0)
+    {
+        PRINTF("SysTick update failed\r\n");
+        while(1)
+        {}
+    }
+
+    // -------------------------------------------------------------------------
+    // Local image memory allocation
+    // -------------------------------------------------------------------------
+    image_t *src = newInt16Image(EVDK5_WIDTH, EVDK5_HEIGHT);
+    image_t *mag = newInt16Image(EVDK5_WIDTH, EVDK5_HEIGHT);
+    image_t *uint8_dst = newUint8Image(EVDK5_WIDTH, EVDK5_HEIGHT);
+
+    if(src == NULL || mag == NULL || uint8_dst == NULL)
+    {
+        PRINTF("Could not allocate image memory\r\n");
+        while(1)
+        {}
+    }
+
+    while(1U)
+    {
+        // ---------------------------------------------------------------------
+        // Wait for camera image complete
+        // ---------------------------------------------------------------------
+        while(smartdma_camera_image_complete == 0)
+        {}
+
+        smartdma_camera_image_complete = 0;
+
+        // ---------------------------------------------------------------------
+        // Image processing pipeline
+        // ---------------------------------------------------------------------
+        // Convert camera image to int16
+        convertUyvyToInt16(cam, src);
+
+        // Time the sobelFast operation
+        ms1 = ms;
+        sobelFast(src, mag);
+        ms2 = ms;
+
+        // Scale int16 result back to uint8 for display
+        scaleInt16ToUint8(mag, uint8_dst);
+
+        // Convert to BGR888 for display
+        convertUint8ToBgr888(uint8_dst, usb);
+
+        // ---------------------------------------------------------------------
+        // Set flag for USB interface that a new frame is available
+        // ---------------------------------------------------------------------
+        image_available_for_usb = 1;
+
+        // Print execution time in microseconds
+        PRINTF("SobelFast execution time: %04d us\r\n", (ms2-ms1)*10);
+    }
+}
+
+void exampleRemoveBorderBlobs(void)
+{
+    PRINTF("%s\r\n", __func__);
+
+    // Update SysTick for microsecond precision
+    SysTick_Config(SystemCoreClock/100000);
+
+    // Local image memory allocation
+    image_t *src = newUint8Image(EVDK5_WIDTH, EVDK5_HEIGHT);
+    image_t *dst = newUint8Image(EVDK5_WIDTH, EVDK5_HEIGHT);
+    image_t *labeled = newUint8Image(EVDK5_WIDTH, EVDK5_HEIGHT);
+
+    if(src == NULL || dst == NULL || labeled == NULL)
+    {
+        PRINTF("Could not allocate image memory\r\n");
+        while(1) {}
+    }
+
+    while(1U)
+    {
+        while(smartdma_camera_image_complete == 0) {}
+        smartdma_camera_image_complete = 0;
+
+        // Convert camera to uint8 and threshold to binary
+        convertUyvyToUint8(cam, src);
+        thresholdOtsu(src, dst, 1);
+
+        // Time the operation
+        ms1 = ms;
+        removeBorderBlobsTwoPass(dst, labeled, CONNECTED_FOUR, 64);
+        ms2 = ms;
+
+        // Display result
+        convertUint8ToBgr888(labeled, usb);
+        image_available_for_usb = 1;
+
+        PRINTF("RemoveBorderBlobs execution time: %d us\r\n", (ms2-ms1)*10);
+    }
+}
+
+void exampleFillHoles(void)
+{
+    PRINTF("%s\r\n", __func__);
+
+    // Update SysTick for microsecond precision
+    SysTick_Config(SystemCoreClock/100000);
+
+    // Local image memory allocation
+    image_t *src = newUint8Image(EVDK5_WIDTH, EVDK5_HEIGHT);
+    image_t *binary = newUint8Image(EVDK5_WIDTH, EVDK5_HEIGHT);
+    image_t *filled = newUint8Image(EVDK5_WIDTH, EVDK5_HEIGHT);
+
+    if(src == NULL || binary == NULL || filled == NULL)
+    {
+        PRINTF("Could not allocate image memory\r\n");
+        while(1) {}
+    }
+
+    while(1U)
+    {
+        while(smartdma_camera_image_complete == 0) {}
+        smartdma_camera_image_complete = 0;
+
+        // Convert camera to uint8 and threshold to binary
+        convertUyvyToUint8(cam, src);
+        thresholdOtsu(src, binary, 1);
+
+        // Time the operation
+        ms1 = ms;
+        fillHolesTwoPass(binary, filled, CONNECTED_FOUR, 64);
+        ms2 = ms;
+
+        // Display result
+        convertUint8ToBgr888(filled, usb);
+        image_available_for_usb = 1;
+
+        PRINTF("FillHoles execution time: %d us\r\n", (ms2-ms1)*10);
+    }
+}
+
+void exampleLabel(void)
+{
+    PRINTF("%s\r\n", __func__);
+
+    // Update SysTick for microsecond precision
+    SysTick_Config(SystemCoreClock/100000);
+
+    // Local image memory allocation
+    image_t *src = newUint8Image(EVDK5_WIDTH, EVDK5_HEIGHT);
+    image_t *binary = newUint8Image(EVDK5_WIDTH, EVDK5_HEIGHT);
+    image_t *labeled = newUint8Image(EVDK5_WIDTH, EVDK5_HEIGHT);
+
+    if(src == NULL || binary == NULL || labeled == NULL)
+    {
+        PRINTF("Could not allocate image memory\r\n");
+        while(1) {}
+    }
+
+    while(1U)
+    {
+        while(smartdma_camera_image_complete == 0) {}
+        smartdma_camera_image_complete = 0;
+
+        // Convert camera to uint8 and threshold to binary
+        convertUyvyToUint8(cam, src);
+        thresholdOtsu(src, binary, 1);
+
+        // Time the operation
+        ms1 = ms;
+        uint8_t numLabels = labelTwoPass(binary, labeled, CONNECTED_FOUR, 64);
+        ms2 = ms;
+
+        // Display result
+        convertUint8ToBgr888(labeled, usb);
+        image_available_for_usb = 1;
+
+        PRINTF("Label execution time: %d us, Found %d objects\r\n", 
+               (ms2-ms1)*10, numLabels);
+    }
+}
+
+void examplePerimeter(void)
+{
+    PRINTF("%s\r\n", __func__);
+
+    // Update SysTick for microsecond precision
+    SysTick_Config(SystemCoreClock/100000);
+
+    // Local image memory allocation
+    image_t *src = newUint8Image(EVDK5_WIDTH, EVDK5_HEIGHT);
+    image_t *binary = newUint8Image(EVDK5_WIDTH, EVDK5_HEIGHT);
+    image_t *labeled = newUint8Image(EVDK5_WIDTH, EVDK5_HEIGHT);
+    blobinfo_t blobinfo = {0};  // Structure to store blob information
+
+    if(src == NULL || binary == NULL || labeled == NULL)
+    {
+        PRINTF("Could not allocate image memory\r\n");
+        while(1) {}
+    }
+
+    while(1U)
+    {
+        while(smartdma_camera_image_complete == 0) {}
+        smartdma_camera_image_complete = 0;
+
+        // Convert camera to uint8 and threshold to binary
+        convertUyvyToUint8(cam, src);
+        thresholdOtsu(src, binary, 1);
+
+        // Label the binary image first
+        uint8_t numLabels = labelTwoPass(binary, labeled, CONNECTED_FOUR, 64);
+
+        if(numLabels > 0)
+        {
+            // Time the operation
+            ms1 = ms;
+            
+            // Initialize blobinfo structure
+            blobinfo.area = 0;
+            blobinfo.perimeter = 0;
+            blobinfo.circularity = 0;
+            
+            // Calculate perimeter using the optimized implementation
+            perimeter(labeled, &blobinfo, 1);  // Get perimeter of blob #1
+            
+            ms2 = ms;
+
+            // Convert perimeter result to display format
+            for(int i = 0; i < EVDK5_WIDTH * EVDK5_HEIGHT; i++)
+            {
+                ((uint8_pixel_t*)labeled->data)[i] = (((uint8_pixel_t*)labeled->data)[i] == 1) ? 255 : 0;
+            }
+        }
+
+        // Display result
+        convertUint8ToBgr888(labeled, usb);
+        image_available_for_usb = 1;
+
+        // Print execution time and perimeter info
+        PRINTF("Perimeter execution time: %d us, Perimeter length: %.2f\r\n", 
+               (ms2-ms1)*10, blobinfo.perimeter);
+    }
+}

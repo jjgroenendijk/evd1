@@ -31,3 +31,18 @@ threshold2Means(src, dst, 1);
 
 thresholdOtsu(src, dst, 1);
 3080 us
+
+sobelFast(src, mag);
+8270 us
+
+removeBorderBlobsTwoPass()
+10600 us
+
+fillHolesTwoPass()
+6120 us
+
+labelTwoPass()
+3750 us
+
+perimeter()
+3210 us
