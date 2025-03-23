@@ -210,14 +210,14 @@ int main(void)
 //    exampleMean();
 //    exampleConvolveFast();
 //    exampleMeanFast();
-//    exampleFinalAssignment();
+    exampleFinalAssignment();
 //    exampleThreshold2Means();
 //    exampleThresholdOtsu();
 //    exampleSobelFast();
 //    exampleRemoveBorderBlobs();
 //	  exampleFillHoles();
 //    exampleLabel();
-    examplePerimeter();
+//    examplePerimeter();
 
     // -------------------------------------------------------------------------
     // Should never reach this
@@ -1338,43 +1338,128 @@ void exampleConvolve(void)
 void exampleFinalAssignment(void)
 {
     PRINTF("%s\r\n", __func__);
-
-    // -------------------------------------------------------------------------
+    
+    // Update SysTick for better precision
+    SysTick_Config(SystemCoreClock/100000);
+    
+    // ---------------------------------------------------------------
     // Local image memory allocation
-    // -------------------------------------------------------------------------
-
-    // \todo Implement setup for the final assignment
-
+    // ---------------------------------------------------------------
+    image_t *src = newUint8Image(EVDK5_WIDTH, EVDK5_HEIGHT);
+    image_t *dst = newUint8Image(EVDK5_WIDTH, EVDK5_HEIGHT);
+    image_t *tmp = newUint8Image(EVDK5_WIDTH, EVDK5_HEIGHT);
+    image_t *labeled = newInt32Image(EVDK5_WIDTH, EVDK5_HEIGHT);
+    
+    if (src == NULL || dst == NULL || tmp == NULL || labeled == NULL)
+    {
+        PRINTF("Could not allocate image memory\r\n");
+        while(1) {}
+    }
+    
     while(1U)
     {
+        // ---------------------------------------------------------------
         // Wait for camera image complete
-        while(smartdma_camera_image_complete == 0)
-        {}
-
+        // ---------------------------------------------------------------
+        while(smartdma_camera_image_complete == 0) {}
         smartdma_camera_image_complete = 0;
-
-        // ---------------------------------------------------------------------
+        
+        // ---------------------------------------------------------------
         // Image processing pipeline
-        // ---------------------------------------------------------------------
-
-        // Copy timestamp
+        // ---------------------------------------------------------------
+        // Convert UYVY camera image to uint8 grayscale
+        convertUyvyToUint8(cam, src);
+        
+        // Start timing
         ms1 = ms;
-
-        // \todo Implement the image processing pipeline for the final
-        //       assignment
-
-        // Copy timestamp
+        
+        // Apply noise reduction with meanFast
+        meanFast(src, dst);
+        
+        // Stretch contrast with scaleFast
+        scaleFast(dst, dst);
+        
+        // Save a copy of the pre-processed image for display
+        copyUint8Image(dst, tmp);
+        
+        // Apply thresholding using Otsu's method
+        thresholdOtsu(dst, dst, BRIGHTNESS_DARK);
+        
+        // Scale binary values for display (0->0, 1->255)
+        for (uint32_t i = 0; i < EVDK5_WIDTH * EVDK5_HEIGHT; i++) {
+            tmp->data[i] = dst->data[i] * 255;
+        }
+        
+        // Remove border blobs
+        removeBorderBlobsTwoPass(dst, dst, CONNECTED_FOUR, 200);
+        
+        // Label connected components
+        uint32_t objectCount = labelTwoPass(dst, labeled, CONNECTED_FOUR, 256);
+        
+        // End timing
         ms2 = ms;
-
-        // ---------------------------------------------------------------------
+        
+        // Update display image with the post-processed binary image
+        for (uint32_t i = 0; i < EVDK5_WIDTH * EVDK5_HEIGHT; i++) {
+            tmp->data[i] = dst->data[i] * 255;
+        }
+        
+        // Find the largest object
+        uint32_t largestObjectLabel = 0;
+        uint32_t largestObjectArea = 0;
+        
+        if (objectCount > 0) {
+            // First pass to find the largest object
+            for (uint32_t i = 1; i <= objectCount; ++i) {
+                blobinfo_t tempBlob = {0};
+                area(labeled, &tempBlob, i);
+                
+                if (tempBlob.area > largestObjectArea) {
+                    largestObjectArea = tempBlob.area;
+                    largestObjectLabel = i;
+                }
+            }
+            
+            // Process only the largest object
+            if (largestObjectLabel > 0) {
+                blobinfo_t blob = {0};
+                
+                // Calculate area, circularity and Hu moments
+                area(labeled, &blob, largestObjectLabel);
+                circularity(labeled, &blob, largestObjectLabel);
+                huInvariantMoments(labeled, &blob, largestObjectLabel);
+                
+                // Classify shape based on circularity
+                const char* shape = "Unknown";
+                if (blob.circularity > 0.9) {
+                    shape = "Circle";
+                } else if (blob.circularity >= 0.75 && blob.circularity <= 0.9) {
+                    shape = "Square";
+                } else if (blob.circularity >= 0.5 && blob.circularity < 0.75) {
+                    shape = "Triangle";
+                }
+                
+                // Print metrics for largest object
+                PRINTF("Time: %d us | Shape: %s | Area=%d Circ=%.3f Hu=[%.6f, %.6f, %.6f, %.6f]\r\n", 
+                       (ms2-ms1)*10, shape, blob.area, blob.circularity,
+                       blob.hu_moments[0], blob.hu_moments[1], 
+                       blob.hu_moments[2], blob.hu_moments[3]);
+            } else {
+                PRINTF("Time: %d us | Shape: None | No objects detected\r\n", (ms2-ms1)*10);
+            }
+        } else {
+            PRINTF("Time: %d us | Shape: None | No objects detected\r\n", (ms2-ms1)*10);
+        }
+        
+        // Convert tmp image to BGR888 format for USB display
+        convertToBgr888(tmp, usb);
+        
+        // ---------------------------------------------------------------
         // Set flag for USB interface that a new frame is available
-        // ---------------------------------------------------------------------
+        // ---------------------------------------------------------------
         image_available_for_usb = 1;
-
-        PRINTF("delta: %d ms\r\n", ms2-ms1);
     }
 }
-
 
 void exampleMean(void)
 {
