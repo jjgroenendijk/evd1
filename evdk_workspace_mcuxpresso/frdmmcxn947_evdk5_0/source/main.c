@@ -1,35 +1,3 @@
-/*! ***************************************************************************
- *
- * \brief     EVKD5 main application
- * \file      image.h
- * \author    Hugo Arends - HAN Embedded Vision and Machine Learning
- * \author
- * \date      April 2024
- *
- * \copyright 2024 HAN University of Applied Sciences. All Rights Reserved.
- *            \n\n
- *            Permission is hereby granted, free of charge, to any person
- *            obtaining a copy of this software and associated documentation
- *            files (the "Software"), to deal in the Software without
- *            restriction, including without limitation the rights to use,
- *            copy, modify, merge, publish, distribute, sublicense, and/or sell
- *            copies of the Software, and to permit persons to whom the
- *            Software is furnished to do so, subject to the following
- *            conditions:
- *            \n\n
- *            The above copyright notice and this permission notice shall be
- *            included in all copies or substantial portions of the Software.
- *            \n\n
- *            THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- *            EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
- *            OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
- *            NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
- *            HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
- *            WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- *            FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
- *            OTHER DEALINGS IN THE SOFTWARE.
- *
- *****************************************************************************/
 #include "fsl_device_registers.h"
 #include "fsl_debug_console.h"
 #include "pin_mux.h"
@@ -80,6 +48,8 @@ void exampleRemoveBorderBlobs(void);
 void exampleFillHoles(void);
 void exampleLabel(void);
 void examplePerimeter(void);
+void printMemoryUsage(void);
+void exampleHuffmanCoding(void);
 
 #if (USB_IMAGE_TYPE_UYVY == 1)
 void exampleWebcamUyvy(void);
@@ -124,40 +94,40 @@ volatile uint32_t image_available_for_usb = 0;
 
 // Camera configuration settings
 static ov7670_resource_t ov7670_resource =
-{
-    .xclock = kOV7670_InputClock12MHZ,
-    .i2cReceiveFunc = BOARD_Camera_I2C_ReceiveSCCB,
-    .i2cSendFunc = BOARD_Camera_I2C_SendSCCB,
+    {
+        .xclock = kOV7670_InputClock12MHZ,
+        .i2cReceiveFunc = BOARD_Camera_I2C_ReceiveSCCB,
+        .i2cSendFunc = BOARD_Camera_I2C_SendSCCB,
 };
 
 static camera_device_handle_t camera_device_handle =
-{
-    .ops = &ov7670_ops,
-    .resource = &ov7670_resource,
+    {
+        .ops = &ov7670_ops,
+        .resource = &ov7670_resource,
 };
 
 static const camera_config_t camera_config =
-{
-    // uyuv_pixel_t takes 2 bytes per pixel
-    .bytesPerPixel = 2,
-    // Supported frame rates are: 14, 15, 25 and 30 fps
-    .framePerSec = 30,
-    // Although the define says YUYV, the OV7670 camera module is configured as
-    // follows after initialization (also see OV7670 datasheet):
-    // TSLB:  0x08 = 0b0000_1000
-    // COM13: 0x88 = 0b1000_1000
-    // TSLB[3], COM13[0] = 10 => UYVY
-    //
-    // This means pixels are stored in memory as follows (U is LSB, Y is MSB):
-    //  31                                0
-    // |YYYYYYYY VVVVVVVV|YYYYYYYY UUUUUUUU|
-    // |     pixel 1     |     pixel 0     |
-    .pixelFormat = kVIDEO_PixelFormatYUYV,
-    // HSYNC/HREF, VSYNC, and PIXCLK signals are used, which is called Gated
-    // Clock interface
-    .interface = kCAMERA_InterfaceGatedClock,
-    // QQVGA (160x120) is the supported resolution due to memory constraints
-    .resolution = kVIDEO_ResolutionQQVGA,
+    {
+        // uyuv_pixel_t takes 2 bytes per pixel
+        .bytesPerPixel = 2,
+        // Supported frame rates are: 14, 15, 25 and 30 fps
+        .framePerSec = 30,
+        // Although the define says YUYV, the OV7670 camera module is configured as
+        // follows after initialization (also see OV7670 datasheet):
+        // TSLB:  0x08 = 0b0000_1000
+        // COM13: 0x88 = 0b1000_1000
+        // TSLB[3], COM13[0] = 10 => UYVY
+        //
+        // This means pixels are stored in memory as follows (U is LSB, Y is MSB):
+        //  31                                0
+        // |YYYYYYYY VVVVVVVV|YYYYYYYY UUUUUUUU|
+        // |     pixel 1     |     pixel 0     |
+        .pixelFormat = kVIDEO_PixelFormatYUYV,
+        // HSYNC/HREF, VSYNC, and PIXCLK signals are used, which is called Gated
+        // Clock interface
+        .interface = kCAMERA_InterfaceGatedClock,
+        // QQVGA (160x120) is the supported resolution due to memory constraints
+        .resolution = kVIDEO_ResolutionQQVGA,
 };
 
 // -----------------------------------------------------------------------------
@@ -184,7 +154,7 @@ int main(void)
     // -------------------------------------------------------------------------
     // Start webcam mode if SW2 is pressed during startup
     // -------------------------------------------------------------------------
-    if((GPIO0->PDIR & (1<<23)) == 0)
+    if ((GPIO0->PDIR & (1 << 23)) == 0)
     {
         PRINTF("SW2 pressed - starting bgr888 webcam mode\r\n");
         exampleWebcamBgr888();
@@ -194,38 +164,39 @@ int main(void)
     // Select one example
     // -------------------------------------------------------------------------
 
-//    exampleWebcamBgr888();
-//    exampleWebcamUint8();
-//    exampleWebcamBgr888TestPattern();
-//    exampleWebcamUint8TestPattern();
-//    exampleThreshold();
-//    exampleRotate();
-//    exampleTemplate();
-//    exampleContrast();
-//    exampleScale();
-//    exampleScaleFast();
-//    exampleClearUint8();
-//    exampleClearUint8Cm33();
-//    exampleConvolve();
-//    exampleMean();
-//    exampleConvolveFast();
-//    exampleMeanFast();
-    exampleFinalAssignment();
-//    exampleThreshold2Means();
-//    exampleThresholdOtsu();
-//    exampleSobelFast();
-//    exampleRemoveBorderBlobs();
-//	  exampleFillHoles();
-//    exampleLabel();
-//    examplePerimeter();
+    //    exampleWebcamBgr888();
+    //    exampleWebcamUint8();
+    //    exampleWebcamBgr888TestPattern();
+    //    exampleWebcamUint8TestPattern();
+    //    exampleThreshold();
+    //    exampleRotate();
+    //    exampleTemplate();
+    //    exampleContrast();
+    //    exampleScale();
+    //    exampleScaleFast();
+    //    exampleClearUint8();
+    //    exampleClearUint8Cm33();
+    //    exampleConvolve();
+    //    exampleMean();
+    //    exampleConvolveFast();
+    //    exampleMeanFast();
+    //    exampleFinalAssignment();
+    //    exampleThreshold2Means();
+    //    exampleThresholdOtsu();
+    //    exampleSobelFast();
+    //    exampleRemoveBorderBlobs();
+    //	  exampleFillHoles();
+    //    exampleLabel();
+    //    examplePerimeter();
+    exampleHuffmanCoding();
 
     // -------------------------------------------------------------------------
     // Should never reach this
     // -------------------------------------------------------------------------
-    PRINTF("Error. Should never reach this when one of the examples is " \
-        "enabled\r\n");
+    PRINTF("Error. Should never reach this when one of the examples is "
+           "enabled\r\n");
 
-    while(1U)
+    while (1U)
     {
         // Intentionally left blank
     }
@@ -260,22 +231,24 @@ void systemInit(void)
     usb = newUyvyImage(EVDK5_WIDTH, EVDK5_HEIGHT);
 #endif
 
-    if(usb == NULL)
+    if (usb == NULL)
     {
         PRINTF("Error. Could not allocate image memory\r\n");
-        while(1)
-        {}
+        while (1)
+        {
+        }
     }
 
     // -------------------------------------------------------------------------
     // SysTick
-    status = SysTick_Config(SystemCoreClock/1000);
+    status = SysTick_Config(SystemCoreClock / 1000);
 
-    if(status != 0)
+    if (status != 0)
     {
         PRINTF("Error. SysTick not started\r\n");
-        while(1)
-        {}
+        while (1)
+        {
+        }
     }
 
     // Lowest priority for the SysTick timer
@@ -288,14 +261,15 @@ void systemInit(void)
 
     // -------------------------------------------------------------------------
     // OV7670 camera
-    GPIO1->PCOR = (1<<19); // CAMERA_RST: 0 normal mode; 1 reset mode
+    GPIO1->PCOR = (1 << 19); // CAMERA_RST: 0 normal mode; 1 reset mode
 
     // 10ms settling time for the camera module
-    ms=0;
-    while(ms < 10)
-    {}
+    ms = 0;
+    while (ms < 10)
+    {
+    }
 
-    GPIO1->PSOR = (1<<19); // CAMERA_RST: 0 normal mode; 1 reset mode
+    GPIO1->PSOR = (1 << 19); // CAMERA_RST: 0 normal mode; 1 reset mode
 
     // Set alternative 7 (SmartDMA_PIOn) for all data pins
     PORT1->PCR[4] = PORT_PCR_MUX(7) | PORT_PCR_IBE(1);
@@ -318,18 +292,19 @@ void systemInit(void)
 
     status = CAMERA_DEVICE_Init(&camera_device_handle, &camera_config);
 
-    if(status != kStatus_Success)
+    if (status != kStatus_Success)
     {
         PRINTF("Error. Camera not initialized\r\n");
-        while(1)
-        {}
+        while (1)
+        {
+        }
     }
 
     // -------------------------------------------------------------------------
     // SmartDMA
     // SmartDMA firmware is copied from FLASH to SRAMX
     SMARTDMA_Init(SMARTDMA_CAMERA_MEM_ADDR, s_smartdmaCameraFirmware,
-        SMARTDMA_CAMERA_FIRMWARE_SIZE);
+                  SMARTDMA_CAMERA_FIRMWARE_SIZE);
 
     // Set the callback function. This function will be called when an entire
     // frame from the camera is available.
@@ -373,13 +348,14 @@ void exampleWebcamBgr888(void)
 {
     PRINTF("%s\r\n", __func__);
 
-    while(1U)
+    while (1U)
     {
         // ---------------------------------------------------------------------
         // Wait for camera image complete
         // ---------------------------------------------------------------------
-        while(smartdma_camera_image_complete == 0)
-        {}
+        while (smartdma_camera_image_complete == 0)
+        {
+        }
 
         smartdma_camera_image_complete = 0;
 
@@ -410,7 +386,7 @@ void exampleWebcamBgr888(void)
         ms2 = ms;
 
         // Print debug info
-        PRINTF("%d | delta: %d ms\r\n", ms1, ms2-ms1);
+        PRINTF("%d | delta: %d ms\r\n", ms1, ms2 - ms1);
     }
 }
 
@@ -424,20 +400,22 @@ void exampleWebcamUint8(void)
     image_t *src = newUint8Image(EVDK5_WIDTH, EVDK5_HEIGHT);
     image_t *dst = newUint8Image(EVDK5_WIDTH, EVDK5_HEIGHT);
 
-    if(dst == NULL)
+    if (dst == NULL)
     {
         PRINTF("Could not allocate image memory\r\n");
-        while(1)
-        {}
+        while (1)
+        {
+        }
     }
 
-    while(1U)
+    while (1U)
     {
         // ---------------------------------------------------------------------
         // Wait for camera image complete
         // ---------------------------------------------------------------------
-        while(smartdma_camera_image_complete == 0)
-        {}
+        while (smartdma_camera_image_complete == 0)
+        {
+        }
 
         smartdma_camera_image_complete = 0;
 
@@ -452,9 +430,9 @@ void exampleWebcamUint8(void)
 
         // Examples, select one!
         copyUint8Image(src, dst);
-//        scale(src, dst);
-//        brightness(src, dst, 100);
-//        contrast(src, dst, 2.0f);
+        //        scale(src, dst);
+        //        brightness(src, dst, 100);
+        //        contrast(src, dst, 2.0f);
 
         // Convert uint8_pixel_t image to bgr888_pixel_t image for USB
         convertUint8ToBgr888(dst, usb);
@@ -468,7 +446,7 @@ void exampleWebcamUint8(void)
         ms2 = ms;
 
         // Print debug info
-        PRINTF("%d | delta: %d ms\r\n", ms1, ms2-ms1);
+        PRINTF("%d | delta: %d ms\r\n", ms1, ms2 - ms1);
     }
 }
 
@@ -482,28 +460,29 @@ void exampleWebcamBgr888TestPattern(void)
     image_t *bgr888 = newBgr888Image(EVDK5_WIDTH, EVDK5_HEIGHT);
 
     const bgr888_pixel_t colorLut[] =
-    {
-        {.b=0x00, .g=0x00, .r=0xFF}, // Red
-        {.b=0x00, .g=0xFF, .r=0x00}, // Green
-        {.b=0xFF, .g=0x00, .r=0x00}, // Blue
-        {.b=0x00, .g=0xFF, .r=0xFF}, // Yellow
-        {.b=0xFF, .g=0x00, .r=0xFF}, // Magenta
-        {.b=0xFF, .g=0xFF, .r=0x00}, // Cyan
-        {.b=0xFF, .g=0xFF, .r=0xFF}, // White
-        {.b=0x00, .g=0x00, .r=0x00}, // Black
-    };
+        {
+            {.b = 0x00, .g = 0x00, .r = 0xFF}, // Red
+            {.b = 0x00, .g = 0xFF, .r = 0x00}, // Green
+            {.b = 0xFF, .g = 0x00, .r = 0x00}, // Blue
+            {.b = 0x00, .g = 0xFF, .r = 0xFF}, // Yellow
+            {.b = 0xFF, .g = 0x00, .r = 0xFF}, // Magenta
+            {.b = 0xFF, .g = 0xFF, .r = 0x00}, // Cyan
+            {.b = 0xFF, .g = 0xFF, .r = 0xFF}, // White
+            {.b = 0x00, .g = 0x00, .r = 0x00}, // Black
+        };
 
     const uint32_t numberOfColors = sizeof(colorLut) / sizeof(bgr888_pixel_t);
     bgr888_pixel_t color = {0x00, 00, 00};
     uint32_t cnt = 0;
 
-    while(1U)
+    while (1U)
     {
         // ---------------------------------------------------------------------
         // Wait for camera image complete
         // ---------------------------------------------------------------------
-        while(smartdma_camera_image_complete == 0)
-        {}
+        while (smartdma_camera_image_complete == 0)
+        {
+        }
 
         smartdma_camera_image_complete = 0;
 
@@ -511,7 +490,7 @@ void exampleWebcamBgr888TestPattern(void)
         // Image processing pipeline
         // ---------------------------------------------------------------------
         // Change color every second
-        if(ms1 < ms)
+        if (ms1 < ms)
         {
             ms1 = ms + 1000;
 
@@ -519,12 +498,10 @@ void exampleWebcamBgr888TestPattern(void)
             color = colorLut[cnt];
 
             // Calculate next index
-            cnt = (cnt == (numberOfColors-1)) ? 0 : cnt + 1;
+            cnt = (cnt == (numberOfColors - 1)) ? 0 : cnt + 1;
         }
 
         // \todo Copy-and-paste week 1 code here
-
-
 
         // Convert bgr888_pixel_t image to USB
         copyBgr888Image(bgr888, usb);
@@ -545,13 +522,14 @@ void exampleWebcamUint8TestPattern(void)
     // -------------------------------------------------------------------------
     image_t *img0 = newUint8Image(EVDK5_WIDTH, EVDK5_HEIGHT);
 
-    while(1U)
+    while (1U)
     {
         // ---------------------------------------------------------------------
         // Wait for camera image complete
         // ---------------------------------------------------------------------
-        while(smartdma_camera_image_complete == 0)
-        {}
+        while (smartdma_camera_image_complete == 0)
+        {
+        }
 
         smartdma_camera_image_complete = 0;
 
@@ -559,7 +537,7 @@ void exampleWebcamUint8TestPattern(void)
         // Image processing pipeline
         // ---------------------------------------------------------------------
         // Set test pattern: pixel value is row number
-        for(int r=0; r < img0->rows; r++)
+        for (int r = 0; r < img0->rows; r++)
         {
             memset(img0->data + (r * img0->cols), r, img0->cols);
         }
@@ -584,18 +562,19 @@ void exampleWebcamUyvy(void)
 {
     PRINTF("%s\r\n", __func__);
 
-    while(1U)
+    while (1U)
     {
         // Wait for camera image complete
-        while(smartdma_camera_image_complete == 0)
-        {}
+        while (smartdma_camera_image_complete == 0)
+        {
+        }
 
         // Reset the flag
         smartdma_camera_image_complete = 0;
 
         // Copy the image. To speed thing up even more, the usb and cam images
         // can be made to point to the same image data buffer.
-        copyUyvyImage(cam,  usb);
+        copyUyvyImage(cam, usb);
 
         // Set flag for USB interface that a new frame is available
         image_available_for_usb = 1;
@@ -617,20 +596,22 @@ void exampleThreshold(void)
     image_t *src = newUint8Image(EVDK5_WIDTH, EVDK5_HEIGHT);
     image_t *dst = newUint8Image(EVDK5_WIDTH, EVDK5_HEIGHT);
 
-    if(dst == NULL)
+    if (dst == NULL)
     {
         PRINTF("Could not allocate image memory\r\n");
-        while(1)
-        {}
+        while (1)
+        {
+        }
     }
 
-    while(1U)
+    while (1U)
     {
         // ---------------------------------------------------------------------
         // Wait for camera image complete
         // ---------------------------------------------------------------------
-        while(smartdma_camera_image_complete == 0)
-        {}
+        while (smartdma_camera_image_complete == 0)
+        {
+        }
 
         smartdma_camera_image_complete = 0;
 
@@ -657,23 +638,23 @@ void exampleThreshold(void)
         image_available_for_usb = 1;
 
         // Print debug info
-        PRINTF("%d | delta: %d ms\r\n", ms1, ms2-ms1);
+        PRINTF("%d | delta: %d ms\r\n", ms1, ms2 - ms1);
     }
 }
-
 
 void exampleRotate(void)
 {
     PRINTF("%s\r\n", __func__);
 
     // Update SysTick to increase precision to 0.01ms (=10us)
-    uint32_t status = SysTick_Config(SystemCoreClock/100000);
+    uint32_t status = SysTick_Config(SystemCoreClock / 100000);
 
-    if(status != 0)
+    if (status != 0)
     {
         PRINTF("SysTick update failed\r\n");
-        while(1)
-        {}
+        while (1)
+        {
+        }
     }
 
     PRINTF("SysTick updated successfully\r\n");
@@ -684,20 +665,22 @@ void exampleRotate(void)
     image_t *src = newUint8Image(EVDK5_WIDTH, EVDK5_HEIGHT);
     image_t *dst = newUint8Image(EVDK5_WIDTH, EVDK5_HEIGHT);
 
-    if(dst == NULL)
+    if (dst == NULL)
     {
         PRINTF("Could not allocate image memory\r\n");
-        while(1)
-        {}
+        while (1)
+        {
+        }
     }
 
-    while(1U)
+    while (1U)
     {
         // ---------------------------------------------------------------------
         // Wait for camera image complete
         // ---------------------------------------------------------------------
-        while(smartdma_camera_image_complete == 0)
-        {}
+        while (smartdma_camera_image_complete == 0)
+        {
+        }
 
         smartdma_camera_image_complete = 0;
 
@@ -712,7 +695,7 @@ void exampleRotate(void)
         ms1 = ms;
         rotate(src, dst, 3.1415f, (point_t){src->cols / 2, src->rows / 2});
         ms2 = ms;
-        PRINTF("%06d us", (ms2-ms1)*10);
+        PRINTF("%06d us", (ms2 - ms1) * 10);
 
         // Prepare
         copyUint8Image(src, dst);
@@ -720,7 +703,7 @@ void exampleRotate(void)
         ms1 = ms;
         rotate180_c(dst);
         ms2 = ms;
-        PRINTF(" | %03d us", (ms2-ms1)*10);
+        PRINTF(" | %03d us", (ms2 - ms1) * 10);
 
         // Prepare
         copyUint8Image(src, dst);
@@ -728,7 +711,7 @@ void exampleRotate(void)
         ms1 = ms;
         rotate180_arm(dst);
         ms2 = ms;
-        PRINTF(" | %03d us", (ms2-ms1)*10);
+        PRINTF(" | %03d us", (ms2 - ms1) * 10);
 
         // Prepare
         copyUint8Image(src, dst);
@@ -736,7 +719,7 @@ void exampleRotate(void)
         ms1 = ms;
         rotate180_cm33(dst);
         ms2 = ms;
-        PRINTF(" | %03d us", (ms2-ms1)*10);
+        PRINTF(" | %03d us", (ms2 - ms1) * 10);
 
         PRINTF("\r\n");
 
@@ -754,7 +737,7 @@ void exampleTemplate(void)
     PRINTF("%s\r\n", __func__);
 
     // Update SysTick to have better precision
-    SysTick_Config(SystemCoreClock/100000);
+    SysTick_Config(SystemCoreClock / 100000);
 
     // -------------------------------------------------------------------------
     // Local image memory allocation
@@ -762,20 +745,22 @@ void exampleTemplate(void)
     image_t *src = newUint8Image(EVDK5_WIDTH, EVDK5_HEIGHT);
     image_t *dst = newUint8Image(EVDK5_WIDTH, EVDK5_HEIGHT);
 
-    if(dst == NULL)
+    if (dst == NULL)
     {
         PRINTF("Could not allocate image memory\r\n");
-        while(1)
-        {}
+        while (1)
+        {
+        }
     }
 
-    while(1U)
+    while (1U)
     {
         // ---------------------------------------------------------------------
         // Wait for camera image complete
         // ---------------------------------------------------------------------
-        while(smartdma_camera_image_complete == 0)
-        {}
+        while (smartdma_camera_image_complete == 0)
+        {
+        }
 
         smartdma_camera_image_complete = 0;
 
@@ -806,7 +791,7 @@ void exampleTemplate(void)
         image_available_for_usb = 1;
 
         // Print debug info
-        PRINTF("%d | delta: %04d us\r\n", ms1, (ms2-ms1)*10);
+        PRINTF("%d | delta: %04d us\r\n", ms1, (ms2 - ms1) * 10);
     }
 }
 
@@ -820,23 +805,25 @@ void exampleContrast(void)
     image_t *src = newUint8Image(EVDK5_WIDTH, EVDK5_HEIGHT);
     image_t *dst = newUint8Image(EVDK5_WIDTH, EVDK5_HEIGHT);
 
-    if(dst == NULL)
+    if (dst == NULL)
     {
         PRINTF("Could not allocate image memory\r\n");
-        while(1)
-        {}
+        while (1)
+        {
+        }
     }
 
     float contrastValue = 1.0f;
     bool increasing = true;
 
-    while(1U)
+    while (1U)
     {
         // ---------------------------------------------------------------------
         // Wait for camera image complete
         // ---------------------------------------------------------------------
-        while(smartdma_camera_image_complete == 0)
-        {}
+        while (smartdma_camera_image_complete == 0)
+        {
+        }
 
         smartdma_camera_image_complete = 0;
 
@@ -853,14 +840,19 @@ void exampleContrast(void)
         contrast(src, dst, contrastValue);
 
         // Gradually change contrast value between 0.5 and 2.0
-        if(increasing) {
+        if (increasing)
+        {
             contrastValue += 0.1f;
-            if(contrastValue >= 2.0f) {
+            if (contrastValue >= 2.0f)
+            {
                 increasing = false;
             }
-        } else {
+        }
+        else
+        {
             contrastValue -= 0.1f;
-            if(contrastValue <= 0.5f) {
+            if (contrastValue <= 0.5f)
+            {
                 increasing = true;
             }
         }
@@ -877,7 +869,7 @@ void exampleContrast(void)
         image_available_for_usb = 1;
 
         // Print debug info
-        PRINTF("Contrast: %.1f | Processing time: %d ms\r\n", contrastValue, ms2-ms1);
+        PRINTF("Contrast: %.1f | Processing time: %d ms\r\n", contrastValue, ms2 - ms1);
     }
 }
 
@@ -886,13 +878,14 @@ void exampleScaleFast(void)
     PRINTF("%s\r\n", __func__);
 
     // Update SysTick to increase precision to 0.01ms (=10us)
-    uint32_t status = SysTick_Config(SystemCoreClock/100000);
+    uint32_t status = SysTick_Config(SystemCoreClock / 100000);
 
-    if(status != 0)
+    if (status != 0)
     {
         PRINTF("SysTick update failed\r\n");
-        while(1)
-        {}
+        while (1)
+        {
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -901,20 +894,22 @@ void exampleScaleFast(void)
     image_t *src = newUint8Image(EVDK5_WIDTH, EVDK5_HEIGHT);
     image_t *dst = newUint8Image(EVDK5_WIDTH, EVDK5_HEIGHT);
 
-    if(dst == NULL)
+    if (dst == NULL)
     {
         PRINTF("Could not allocate image memory\r\n");
-        while(1)
-        {}
+        while (1)
+        {
+        }
     }
 
-    while(1U)
+    while (1U)
     {
         // ---------------------------------------------------------------------
         // Wait for camera image complete
         // ---------------------------------------------------------------------
-        while(smartdma_camera_image_complete == 0)
-        {}
+        while (smartdma_camera_image_complete == 0)
+        {
+        }
 
         smartdma_camera_image_complete = 0;
 
@@ -938,7 +933,7 @@ void exampleScaleFast(void)
         image_available_for_usb = 1;
 
         // Print execution time
-        PRINTF("ScaleFast execution time: %d us\r\n", (ms2-ms1)*10);
+        PRINTF("ScaleFast execution time: %d us\r\n", (ms2 - ms1) * 10);
     }
 }
 
@@ -947,13 +942,14 @@ void exampleScale(void)
     PRINTF("%s\r\n", __func__);
 
     // Update SysTick to increase precision to 0.01ms (=10us)
-    uint32_t status = SysTick_Config(SystemCoreClock/100000);
+    uint32_t status = SysTick_Config(SystemCoreClock / 100000);
 
-    if(status != 0)
+    if (status != 0)
     {
         PRINTF("SysTick update failed\r\n");
-        while(1)
-        {}
+        while (1)
+        {
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -962,20 +958,22 @@ void exampleScale(void)
     image_t *src = newUint8Image(EVDK5_WIDTH, EVDK5_HEIGHT);
     image_t *dst = newUint8Image(EVDK5_WIDTH, EVDK5_HEIGHT);
 
-    if(dst == NULL)
+    if (dst == NULL)
     {
         PRINTF("Could not allocate image memory\r\n");
-        while(1)
-        {}
+        while (1)
+        {
+        }
     }
 
-    while(1U)
+    while (1U)
     {
         // ---------------------------------------------------------------------
         // Wait for camera image complete
         // ---------------------------------------------------------------------
-        while(smartdma_camera_image_complete == 0)
-        {}
+        while (smartdma_camera_image_complete == 0)
+        {
+        }
 
         smartdma_camera_image_complete = 0;
 
@@ -999,7 +997,7 @@ void exampleScale(void)
         image_available_for_usb = 1;
 
         // Print execution time
-        PRINTF("Scale execution time: %d us\r\n", (ms2-ms1)*10);
+        PRINTF("Scale execution time: %d us\r\n", (ms2 - ms1) * 10);
     }
 }
 
@@ -1008,13 +1006,14 @@ void exampleClearUint8(void)
     PRINTF("%s\r\n", __func__);
 
     // Update SysTick to increase precision to 0.01ms (=10us)
-    uint32_t status = SysTick_Config(SystemCoreClock/100000);
+    uint32_t status = SysTick_Config(SystemCoreClock / 100000);
 
-    if(status != 0)
+    if (status != 0)
     {
         PRINTF("SysTick update failed\r\n");
-        while(1)
-        {}
+        while (1)
+        {
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -1022,20 +1021,22 @@ void exampleClearUint8(void)
     // -------------------------------------------------------------------------
     image_t *img = newUint8Image(EVDK5_WIDTH, EVDK5_HEIGHT);
 
-    if(img == NULL)
+    if (img == NULL)
     {
         PRINTF("Could not allocate image memory\r\n");
-        while(1)
-        {}
+        while (1)
+        {
+        }
     }
 
-    while(1U)
+    while (1U)
     {
         // ---------------------------------------------------------------------
         // Wait for camera image complete
         // ---------------------------------------------------------------------
-        while(smartdma_camera_image_complete == 0)
-        {}
+        while (smartdma_camera_image_complete == 0)
+        {
+        }
 
         smartdma_camera_image_complete = 0;
 
@@ -1055,7 +1056,7 @@ void exampleClearUint8(void)
         image_available_for_usb = 1;
 
         // Print execution time
-        PRINTF("ClearUint8 execution time: %d us\r\n", (ms2-ms1)*10);
+        PRINTF("ClearUint8 execution time: %d us\r\n", (ms2 - ms1) * 10);
     }
 }
 
@@ -1064,13 +1065,14 @@ void exampleClearUint8Cm33(void)
     PRINTF("%s\r\n", __func__);
 
     // Update SysTick to increase precision to 0.01ms (=10us)
-    uint32_t status = SysTick_Config(SystemCoreClock/100000);
+    uint32_t status = SysTick_Config(SystemCoreClock / 100000);
 
-    if(status != 0)
+    if (status != 0)
     {
         PRINTF("SysTick update failed\r\n");
-        while(1)
-        {}
+        while (1)
+        {
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -1078,25 +1080,28 @@ void exampleClearUint8Cm33(void)
     // -------------------------------------------------------------------------
     image_t *img = newUint8Image(EVDK5_WIDTH, EVDK5_HEIGHT);
 
-    if(img == NULL)
+    if (img == NULL)
     {
         PRINTF("Could not allocate image memory\r\n");
-        while(1)
-        {}
+        while (1)
+        {
+        }
     }
 
     // Fill image with pattern to verify clearing
-    for(int i = 0; i < img->rows * img->cols; i++) {
-        ((uint8_t*)img->data)[i] = i & 0xFF;
+    for (int i = 0; i < img->rows * img->cols; i++)
+    {
+        ((uint8_t *)img->data)[i] = i & 0xFF;
     }
 
-    while(1U)
+    while (1U)
     {
         // ---------------------------------------------------------------------
         // Wait for camera image complete
         // ---------------------------------------------------------------------
-        while(smartdma_camera_image_complete == 0)
-        {}
+        while (smartdma_camera_image_complete == 0)
+        {
+        }
 
         smartdma_camera_image_complete = 0;
 
@@ -1116,7 +1121,7 @@ void exampleClearUint8Cm33(void)
         image_available_for_usb = 1;
 
         // Print execution time
-        PRINTF("ClearUint8_cm33 execution time: %d us\r\n", (ms2-ms1)*10);
+        PRINTF("ClearUint8_cm33 execution time: %d us\r\n", (ms2 - ms1) * 10);
     }
 }
 
@@ -1125,13 +1130,14 @@ void exampleConvolveFast(void)
     PRINTF("%s\r\n", __func__);
 
     // Update SysTick to increase precision to 0.01ms (=10us)
-    uint32_t status = SysTick_Config(SystemCoreClock/100000);
+    uint32_t status = SysTick_Config(SystemCoreClock / 100000);
 
-    if(status != 0)
+    if (status != 0)
     {
         PRINTF("SysTick update failed\r\n");
-        while(1)
-        {}
+        while (1)
+        {
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -1144,9 +1150,15 @@ void exampleConvolveFast(void)
 
     // Define 3x3 mask for mean filter (all 1's)
     int16_pixel_t msk_data[3 * 3] = {
-        1, 1, 1,
-        1, 1, 1,
-        1, 1, 1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
     };
 
     image_t msk = {
@@ -1156,26 +1168,29 @@ void exampleConvolveFast(void)
         .data = (uint8_t *)msk_data,
     };
 
-    if(src == NULL || dst == NULL || uint8_src == NULL || uint8_dst == NULL)
+    if (src == NULL || dst == NULL || uint8_src == NULL || uint8_dst == NULL)
     {
         PRINTF("Could not allocate image memory\r\n");
-        while(1)
-        {}
+        while (1)
+        {
+        }
     }
 
-    while(1U)
+    while (1U)
     {
         // Wait for camera image complete
-        while(smartdma_camera_image_complete == 0)
-        {}
+        while (smartdma_camera_image_complete == 0)
+        {
+        }
         smartdma_camera_image_complete = 0;
 
         // Image processing pipeline
-        convertUyvyToUint8(cam, uint8_src);  // Camera to uint8
-        
+        convertUyvyToUint8(cam, uint8_src); // Camera to uint8
+
         // Convert uint8 source to int16 for convolution
-        for(int i = 0; i < EVDK5_WIDTH * EVDK5_HEIGHT; i++) {
-            ((int16_pixel_t*)src->data)[i] = ((uint8_pixel_t*)uint8_src->data)[i];
+        for (int i = 0; i < EVDK5_WIDTH * EVDK5_HEIGHT; i++)
+        {
+            ((int16_pixel_t *)src->data)[i] = ((uint8_pixel_t *)uint8_src->data)[i];
         }
 
         // Time the convolveFast operation
@@ -1189,7 +1204,7 @@ void exampleConvolveFast(void)
 
         // Scale int16 result back to uint8 for display
         scaleInt16ToUint8(dst, uint8_dst);
-        
+
         // Convert to BGR888 for display
         convertUint8ToBgr888(uint8_dst, usb);
 
@@ -1197,7 +1212,7 @@ void exampleConvolveFast(void)
         image_available_for_usb = 1;
 
         // Print execution time
-        PRINTF("ConvolveFast execution time: %d us\r\n", (ms2-ms1)*10);
+        PRINTF("ConvolveFast execution time: %d us\r\n", (ms2 - ms1) * 10);
     }
 }
 
@@ -1206,13 +1221,14 @@ void exampleMeanFast(void)
     PRINTF("%s\r\n", __func__);
 
     // Update SysTick to increase precision to 0.01ms (=10us)
-    uint32_t status = SysTick_Config(SystemCoreClock/100000);
+    uint32_t status = SysTick_Config(SystemCoreClock / 100000);
 
-    if(status != 0)
+    if (status != 0)
     {
         PRINTF("SysTick update failed\r\n");
-        while(1)
-        {}
+        while (1)
+        {
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -1221,20 +1237,22 @@ void exampleMeanFast(void)
     image_t *src = newUint8Image(EVDK5_WIDTH, EVDK5_HEIGHT);
     image_t *dst = newUint8Image(EVDK5_WIDTH, EVDK5_HEIGHT);
 
-    if(dst == NULL)
+    if (dst == NULL)
     {
         PRINTF("Could not allocate image memory\r\n");
-        while(1)
-        {}
+        while (1)
+        {
+        }
     }
 
-    while(1U)
+    while (1U)
     {
         // ---------------------------------------------------------------------
         // Wait for camera image complete
         // ---------------------------------------------------------------------
-        while(smartdma_camera_image_complete == 0)
-        {}
+        while (smartdma_camera_image_complete == 0)
+        {
+        }
 
         smartdma_camera_image_complete = 0;
 
@@ -1258,7 +1276,7 @@ void exampleMeanFast(void)
         image_available_for_usb = 1;
 
         // Print execution time
-        PRINTF("MeanFast execution time: %d us\r\n", (ms2-ms1)*10);
+        PRINTF("MeanFast execution time: %d us\r\n", (ms2 - ms1) * 10);
     }
 }
 
@@ -1272,12 +1290,18 @@ void exampleConvolve(void)
     image_t *src = newInt16Image(EVDK5_WIDTH, EVDK5_HEIGHT);
     image_t *dst = newInt16Image(EVDK5_WIDTH, EVDK5_HEIGHT);
     image_t *uint8_dst = newUint8Image(EVDK5_WIDTH, EVDK5_HEIGHT); // Add this intermediate image
-    
+
     // Create a 3x3 mask for testing (simple edge detection)
     int16_pixel_t msk_data[3 * 3] = {
-        -1, -1, -1,
-        -1,  8, -1,
-        -1, -1, -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        8,
+        -1,
+        -1,
+        -1,
+        -1,
     };
 
     image_t msk = {
@@ -1287,20 +1311,22 @@ void exampleConvolve(void)
         .data = (uint8_t *)msk_data,
     };
 
-    if(src == NULL || dst == NULL || uint8_dst == NULL) // Updated null check
+    if (src == NULL || dst == NULL || uint8_dst == NULL) // Updated null check
     {
         PRINTF("Could not allocate image memory\r\n");
-        while(1)
-        {}
+        while (1)
+        {
+        }
     }
 
-    while(1U)
+    while (1U)
     {
         // ---------------------------------------------------------------------
         // Wait for camera image complete
         // ---------------------------------------------------------------------
-        while(smartdma_camera_image_complete == 0)
-        {}
+        while (smartdma_camera_image_complete == 0)
+        {
+        }
 
         smartdma_camera_image_complete = 0;
 
@@ -1323,7 +1349,7 @@ void exampleConvolve(void)
         scaleInt16ToUint8(dst, uint8_dst); // Use intermediate uint8 image
 
         // Convert uint8 to BGR888 for USB display
-        convertUint8ToBgr888(uint8_dst, usb);  
+        convertUint8ToBgr888(uint8_dst, usb);
 
         // ---------------------------------------------------------------------
         // Set flag for USB interface that a new frame is available
@@ -1331,17 +1357,50 @@ void exampleConvolve(void)
         image_available_for_usb = 1;
 
         // Print debug info
-        PRINTF("%d | delta: %d ms\r\n", ms1, ms2-ms1);
+        PRINTF("%d | delta: %d ms\r\n", ms1, ms2 - ms1);
     }
 }
 
 void exampleFinalAssignment(void)
 {
     PRINTF("%s\r\n", __func__);
-    
+
     // Update SysTick for better precision
-    SysTick_Config(SystemCoreClock/100000);
-    
+    SysTick_Config(SystemCoreClock / 100000);
+
+    // Helper function for setting LED color based on shape
+    void setLedForShape(const char *shape)
+    {
+        if (strcmp(shape, "Triangle") == 0)
+        {
+            // Set LED to RED for Triangle
+            LED_RED_ON();
+            LED_GREEN_OFF();
+            LED_BLUE_OFF();
+        }
+        else if (strcmp(shape, "Square") == 0)
+        {
+            // Set LED to GREEN for Square
+            LED_RED_OFF();
+            LED_GREEN_ON();
+            LED_BLUE_OFF();
+        }
+        else if (strcmp(shape, "Circle") == 0)
+        {
+            // Set LED to BLUE for Circle
+            LED_RED_OFF();
+            LED_GREEN_OFF();
+            LED_BLUE_ON();
+        }
+        else
+        {
+            // Set LED to WHITE for Unknown
+            LED_RED_ON();
+            LED_GREEN_ON();
+            LED_BLUE_ON();
+        }
+    }
+
     // ---------------------------------------------------------------
     // Local image memory allocation
     // ---------------------------------------------------------------
@@ -1349,111 +1408,133 @@ void exampleFinalAssignment(void)
     image_t *dst = newUint8Image(EVDK5_WIDTH, EVDK5_HEIGHT);
     image_t *tmp = newUint8Image(EVDK5_WIDTH, EVDK5_HEIGHT);
     image_t *labeled = newInt32Image(EVDK5_WIDTH, EVDK5_HEIGHT);
-    
+
     if (src == NULL || dst == NULL || tmp == NULL || labeled == NULL)
     {
         PRINTF("Could not allocate image memory\r\n");
-        while(1) {}
+        while (1)
+        {
+        }
     }
-    
-    while(1U)
+
+    while (1U)
     {
         // ---------------------------------------------------------------
         // Wait for camera image complete
         // ---------------------------------------------------------------
-        while(smartdma_camera_image_complete == 0) {}
+        while (smartdma_camera_image_complete == 0)
+        {
+        }
         smartdma_camera_image_complete = 0;
-        
+
         // ---------------------------------------------------------------
         // Image processing pipeline
         // ---------------------------------------------------------------
         // Convert UYVY camera image to uint8 grayscale
         convertUyvyToUint8(cam, src);
-        
+
         // Start timing
         ms1 = ms;
-        
+
         // Apply noise reduction with meanFast
         meanFast(src, dst);
-        
+
         // Stretch contrast with scaleFast
         scaleFast(dst, dst);
-        
+
         // Save a copy of the pre-processed image for display
         copyUint8Image(dst, tmp);
-        
+
         // Apply thresholding using Otsu's method
         thresholdOtsu(dst, dst, BRIGHTNESS_DARK);
-        
+
         // Scale binary values for display (0->0, 1->255)
-        for (uint32_t i = 0; i < EVDK5_WIDTH * EVDK5_HEIGHT; i++) {
+        for (uint32_t i = 0; i < EVDK5_WIDTH * EVDK5_HEIGHT; i++)
+        {
             tmp->data[i] = dst->data[i] * 255;
         }
-        
+
         // Remove border blobs
         removeBorderBlobsTwoPass(dst, dst, CONNECTED_FOUR, 200);
-        
+
         // Label connected components
         uint32_t objectCount = labelTwoPass(dst, labeled, CONNECTED_FOUR, 256);
-        
+
         // End timing
         ms2 = ms;
-        
+
         // Update display image with the post-processed binary image
-        for (uint32_t i = 0; i < EVDK5_WIDTH * EVDK5_HEIGHT; i++) {
+        for (uint32_t i = 0; i < EVDK5_WIDTH * EVDK5_HEIGHT; i++)
+        {
             tmp->data[i] = dst->data[i] * 255;
         }
-        
+
         // Find the largest object
         uint32_t largestObjectLabel = 0;
         uint32_t largestObjectArea = 0;
-        
-        if (objectCount > 0) {
+
+        if (objectCount > 0)
+        {
             // First pass to find the largest object
-            for (uint32_t i = 1; i <= objectCount; ++i) {
+            for (uint32_t i = 1; i <= objectCount; ++i)
+            {
                 blobinfo_t tempBlob = {0};
                 area(labeled, &tempBlob, i);
-                
-                if (tempBlob.area > largestObjectArea) {
+
+                if (tempBlob.area > largestObjectArea)
+                {
                     largestObjectArea = tempBlob.area;
                     largestObjectLabel = i;
                 }
             }
-            
+
             // Process only the largest object
-            if (largestObjectLabel > 0) {
+            if (largestObjectLabel > 0)
+            {
                 blobinfo_t blob = {0};
-                
+
                 // Calculate area, circularity and Hu moments
                 area(labeled, &blob, largestObjectLabel);
                 circularity(labeled, &blob, largestObjectLabel);
                 huInvariantMoments(labeled, &blob, largestObjectLabel);
-                
+
                 // Classify shape based on circularity
-                const char* shape = "Unknown";
-                if (blob.circularity > 0.9) {
+                const char *shape = "Unknown";
+                if (blob.circularity > 0.9)
+                {
                     shape = "Circle";
-                } else if (blob.circularity >= 0.75 && blob.circularity <= 0.9) {
+                }
+                else if (blob.circularity >= 0.75 && blob.circularity <= 0.9)
+                {
                     shape = "Square";
-                } else if (blob.circularity >= 0.5 && blob.circularity < 0.75) {
+                }
+                else if (blob.circularity >= 0.5 && blob.circularity < 0.75)
+                {
                     shape = "Triangle";
                 }
-                
+
+                // Set LED color based on shape
+                setLedForShape(shape);
+
                 // Print metrics for largest object
-                PRINTF("Time: %d us | Shape: %s | Area=%d Circ=%.3f Hu=[%.6f, %.6f, %.6f, %.6f]\r\n", 
-                       (ms2-ms1)*10, shape, blob.area, blob.circularity,
-                       blob.hu_moments[0], blob.hu_moments[1], 
+                PRINTF("Time: %d us | Shape: %s | Area=%d Circ=%.3f Hu=[%.6f, %.6f, %.6f, %.6f]\r\n",
+                       (ms2 - ms1) * 10, shape, blob.area, blob.circularity,
+                       blob.hu_moments[0], blob.hu_moments[1],
                        blob.hu_moments[2], blob.hu_moments[3]);
-            } else {
-                PRINTF("Time: %d us | Shape: None | No objects detected\r\n", (ms2-ms1)*10);
             }
-        } else {
-            PRINTF("Time: %d us | Shape: None | No objects detected\r\n", (ms2-ms1)*10);
+            else
+            {
+                PRINTF("Time: %d us | Shape: None | No objects detected\r\n", (ms2 - ms1) * 10);
+            }
         }
-        
+        else
+        {
+            PRINTF("Time: %d us | Shape: None | No objects detected\r\n", (ms2 - ms1) * 10);
+        }
+
         // Convert tmp image to BGR888 format for USB display
         convertToBgr888(tmp, usb);
-        
+
         // ---------------------------------------------------------------
         // Set flag for USB interface that a new frame is available
         // ---------------------------------------------------------------
@@ -1466,13 +1547,14 @@ void exampleMean(void)
     PRINTF("%s\r\n", __func__);
 
     // Update SysTick to increase precision to 0.01ms (=10us)
-    uint32_t status = SysTick_Config(SystemCoreClock/100000);
+    uint32_t status = SysTick_Config(SystemCoreClock / 100000);
 
-    if(status != 0)
+    if (status != 0)
     {
         PRINTF("SysTick update failed\r\n");
-        while(1)
-        {}
+        while (1)
+        {
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -1481,20 +1563,22 @@ void exampleMean(void)
     image_t *src = newUint8Image(EVDK5_WIDTH, EVDK5_HEIGHT);
     image_t *dst = newUint8Image(EVDK5_WIDTH, EVDK5_HEIGHT);
 
-    if(dst == NULL)
+    if (dst == NULL)
     {
         PRINTF("Could not allocate image memory\r\n");
-        while(1)
-        {}
+        while (1)
+        {
+        }
     }
 
-    while(1U)
+    while (1U)
     {
         // ---------------------------------------------------------------------
         // Wait for camera image complete
         // ---------------------------------------------------------------------
-        while(smartdma_camera_image_complete == 0)
-        {}
+        while (smartdma_camera_image_complete == 0)
+        {
+        }
 
         smartdma_camera_image_complete = 0;
 
@@ -1518,7 +1602,7 @@ void exampleMean(void)
         image_available_for_usb = 1;
 
         // Print execution time
-        PRINTF("Mean execution time: %d us\r\n", (ms2-ms1)*10);
+        PRINTF("Mean execution time: %d us\r\n", (ms2 - ms1) * 10);
     }
 }
 
@@ -1527,13 +1611,14 @@ void exampleThreshold2Means(void)
     PRINTF("%s\r\n", __func__);
 
     // Update SysTick to increase precision to 0.01ms (=10us)
-    uint32_t status = SysTick_Config(SystemCoreClock/100000);
+    uint32_t status = SysTick_Config(SystemCoreClock / 100000);
 
-    if(status != 0)
+    if (status != 0)
     {
         PRINTF("SysTick update failed\r\n");
-        while(1)
-        {}
+        while (1)
+        {
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -1542,20 +1627,22 @@ void exampleThreshold2Means(void)
     image_t *src = newUint8Image(EVDK5_WIDTH, EVDK5_HEIGHT);
     image_t *dst = newUint8Image(EVDK5_WIDTH, EVDK5_HEIGHT);
 
-    if(dst == NULL)
+    if (dst == NULL)
     {
         PRINTF("Could not allocate image memory\r\n");
-        while(1)
-        {}
+        while (1)
+        {
+        }
     }
 
-    while(1U)
+    while (1U)
     {
         // ---------------------------------------------------------------------
         // Wait for camera image complete
         // ---------------------------------------------------------------------
-        while(smartdma_camera_image_complete == 0)
-        {}
+        while (smartdma_camera_image_complete == 0)
+        {
+        }
 
         smartdma_camera_image_complete = 0;
 
@@ -1579,7 +1666,7 @@ void exampleThreshold2Means(void)
         image_available_for_usb = 1;
 
         // Print execution time
-        PRINTF("Threshold2Means execution time: %d us\r\n", (ms2-ms1)*10);
+        PRINTF("Threshold2Means execution time: %d us\r\n", (ms2 - ms1) * 10);
     }
 }
 
@@ -1588,13 +1675,14 @@ void exampleThresholdOtsu(void)
     PRINTF("%s\r\n", __func__);
 
     // Update SysTick to increase precision to 0.01ms (=10us)
-    uint32_t status = SysTick_Config(SystemCoreClock/100000);
+    uint32_t status = SysTick_Config(SystemCoreClock / 100000);
 
-    if(status != 0)
+    if (status != 0)
     {
         PRINTF("SysTick update failed\r\n");
-        while(1)
-        {}
+        while (1)
+        {
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -1603,20 +1691,22 @@ void exampleThresholdOtsu(void)
     image_t *src = newUint8Image(EVDK5_WIDTH, EVDK5_HEIGHT);
     image_t *dst = newUint8Image(EVDK5_WIDTH, EVDK5_HEIGHT);
 
-    if(dst == NULL)
+    if (dst == NULL)
     {
         PRINTF("Could not allocate image memory\r\n");
-        while(1)
-        {}
+        while (1)
+        {
+        }
     }
 
-    while(1U)
+    while (1U)
     {
         // ---------------------------------------------------------------------
         // Wait for camera image complete
         // ---------------------------------------------------------------------
-        while(smartdma_camera_image_complete == 0)
-        {}
+        while (smartdma_camera_image_complete == 0)
+        {
+        }
 
         smartdma_camera_image_complete = 0;
 
@@ -1640,7 +1730,7 @@ void exampleThresholdOtsu(void)
         image_available_for_usb = 1;
 
         // Print execution time
-        PRINTF("ThresholdOtsu execution time: %d us\r\n", (ms2-ms1)*10);
+        PRINTF("ThresholdOtsu execution time: %d us\r\n", (ms2 - ms1) * 10);
     }
 }
 
@@ -1649,13 +1739,14 @@ void exampleSobelFast(void)
     PRINTF("%s\r\n", __func__);
 
     // Update SysTick to increase precision to 0.01ms (=10us)
-    uint32_t status = SysTick_Config(SystemCoreClock/100000);
+    uint32_t status = SysTick_Config(SystemCoreClock / 100000);
 
-    if(status != 0)
+    if (status != 0)
     {
         PRINTF("SysTick update failed\r\n");
-        while(1)
-        {}
+        while (1)
+        {
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -1665,20 +1756,22 @@ void exampleSobelFast(void)
     image_t *mag = newInt16Image(EVDK5_WIDTH, EVDK5_HEIGHT);
     image_t *uint8_dst = newUint8Image(EVDK5_WIDTH, EVDK5_HEIGHT);
 
-    if(src == NULL || mag == NULL || uint8_dst == NULL)
+    if (src == NULL || mag == NULL || uint8_dst == NULL)
     {
         PRINTF("Could not allocate image memory\r\n");
-        while(1)
-        {}
+        while (1)
+        {
+        }
     }
 
-    while(1U)
+    while (1U)
     {
         // ---------------------------------------------------------------------
         // Wait for camera image complete
         // ---------------------------------------------------------------------
-        while(smartdma_camera_image_complete == 0)
-        {}
+        while (smartdma_camera_image_complete == 0)
+        {
+        }
 
         smartdma_camera_image_complete = 0;
 
@@ -1705,7 +1798,7 @@ void exampleSobelFast(void)
         image_available_for_usb = 1;
 
         // Print execution time in microseconds
-        PRINTF("SobelFast execution time: %04d us\r\n", (ms2-ms1)*10);
+        PRINTF("SobelFast execution time: %04d us\r\n", (ms2 - ms1) * 10);
     }
 }
 
@@ -1714,22 +1807,26 @@ void exampleRemoveBorderBlobs(void)
     PRINTF("%s\r\n", __func__);
 
     // Update SysTick for microsecond precision
-    SysTick_Config(SystemCoreClock/100000);
+    SysTick_Config(SystemCoreClock / 100000);
 
     // Local image memory allocation
     image_t *src = newUint8Image(EVDK5_WIDTH, EVDK5_HEIGHT);
     image_t *dst = newUint8Image(EVDK5_WIDTH, EVDK5_HEIGHT);
     image_t *labeled = newUint8Image(EVDK5_WIDTH, EVDK5_HEIGHT);
 
-    if(src == NULL || dst == NULL || labeled == NULL)
+    if (src == NULL || dst == NULL || labeled == NULL)
     {
         PRINTF("Could not allocate image memory\r\n");
-        while(1) {}
+        while (1)
+        {
+        }
     }
 
-    while(1U)
+    while (1U)
     {
-        while(smartdma_camera_image_complete == 0) {}
+        while (smartdma_camera_image_complete == 0)
+        {
+        }
         smartdma_camera_image_complete = 0;
 
         // Convert camera to uint8 and threshold to binary
@@ -1745,7 +1842,7 @@ void exampleRemoveBorderBlobs(void)
         convertUint8ToBgr888(labeled, usb);
         image_available_for_usb = 1;
 
-        PRINTF("RemoveBorderBlobs execution time: %d us\r\n", (ms2-ms1)*10);
+        PRINTF("RemoveBorderBlobs execution time: %d us\r\n", (ms2 - ms1) * 10);
     }
 }
 
@@ -1754,22 +1851,26 @@ void exampleFillHoles(void)
     PRINTF("%s\r\n", __func__);
 
     // Update SysTick for microsecond precision
-    SysTick_Config(SystemCoreClock/100000);
+    SysTick_Config(SystemCoreClock / 100000);
 
     // Local image memory allocation
     image_t *src = newUint8Image(EVDK5_WIDTH, EVDK5_HEIGHT);
     image_t *binary = newUint8Image(EVDK5_WIDTH, EVDK5_HEIGHT);
     image_t *filled = newUint8Image(EVDK5_WIDTH, EVDK5_HEIGHT);
 
-    if(src == NULL || binary == NULL || filled == NULL)
+    if (src == NULL || binary == NULL || filled == NULL)
     {
         PRINTF("Could not allocate image memory\r\n");
-        while(1) {}
+        while (1)
+        {
+        }
     }
 
-    while(1U)
+    while (1U)
     {
-        while(smartdma_camera_image_complete == 0) {}
+        while (smartdma_camera_image_complete == 0)
+        {
+        }
         smartdma_camera_image_complete = 0;
 
         // Convert camera to uint8 and threshold to binary
@@ -1785,7 +1886,7 @@ void exampleFillHoles(void)
         convertUint8ToBgr888(filled, usb);
         image_available_for_usb = 1;
 
-        PRINTF("FillHoles execution time: %d us\r\n", (ms2-ms1)*10);
+        PRINTF("FillHoles execution time: %d us\r\n", (ms2 - ms1) * 10);
     }
 }
 
@@ -1794,22 +1895,26 @@ void exampleLabel(void)
     PRINTF("%s\r\n", __func__);
 
     // Update SysTick for microsecond precision
-    SysTick_Config(SystemCoreClock/100000);
+    SysTick_Config(SystemCoreClock / 100000);
 
     // Local image memory allocation
     image_t *src = newUint8Image(EVDK5_WIDTH, EVDK5_HEIGHT);
     image_t *binary = newUint8Image(EVDK5_WIDTH, EVDK5_HEIGHT);
     image_t *labeled = newUint8Image(EVDK5_WIDTH, EVDK5_HEIGHT);
 
-    if(src == NULL || binary == NULL || labeled == NULL)
+    if (src == NULL || binary == NULL || labeled == NULL)
     {
         PRINTF("Could not allocate image memory\r\n");
-        while(1) {}
+        while (1)
+        {
+        }
     }
 
-    while(1U)
+    while (1U)
     {
-        while(smartdma_camera_image_complete == 0) {}
+        while (smartdma_camera_image_complete == 0)
+        {
+        }
         smartdma_camera_image_complete = 0;
 
         // Convert camera to uint8 and threshold to binary
@@ -1825,8 +1930,8 @@ void exampleLabel(void)
         convertUint8ToBgr888(labeled, usb);
         image_available_for_usb = 1;
 
-        PRINTF("Label execution time: %d us, Found %d objects\r\n", 
-               (ms2-ms1)*10, numLabels);
+        PRINTF("Label execution time: %d us, Found %d objects\r\n",
+               (ms2 - ms1) * 10, numLabels);
     }
 }
 
@@ -1835,23 +1940,27 @@ void examplePerimeter(void)
     PRINTF("%s\r\n", __func__);
 
     // Update SysTick for microsecond precision
-    SysTick_Config(SystemCoreClock/100000);
+    SysTick_Config(SystemCoreClock / 100000);
 
     // Local image memory allocation
     image_t *src = newUint8Image(EVDK5_WIDTH, EVDK5_HEIGHT);
     image_t *binary = newUint8Image(EVDK5_WIDTH, EVDK5_HEIGHT);
     image_t *labeled = newUint8Image(EVDK5_WIDTH, EVDK5_HEIGHT);
-    blobinfo_t blobinfo = {0};  // Structure to store blob information
+    blobinfo_t blobinfo = {0}; // Structure to store blob information
 
-    if(src == NULL || binary == NULL || labeled == NULL)
+    if (src == NULL || binary == NULL || labeled == NULL)
     {
         PRINTF("Could not allocate image memory\r\n");
-        while(1) {}
+        while (1)
+        {
+        }
     }
 
-    while(1U)
+    while (1U)
     {
-        while(smartdma_camera_image_complete == 0) {}
+        while (smartdma_camera_image_complete == 0)
+        {
+        }
         smartdma_camera_image_complete = 0;
 
         // Convert camera to uint8 and threshold to binary
@@ -1861,25 +1970,25 @@ void examplePerimeter(void)
         // Label the binary image first
         uint8_t numLabels = labelTwoPass(binary, labeled, CONNECTED_FOUR, 64);
 
-        if(numLabels > 0)
+        if (numLabels > 0)
         {
             // Time the operation
             ms1 = ms;
-            
+
             // Initialize blobinfo structure
             blobinfo.area = 0;
             blobinfo.perimeter = 0;
             blobinfo.circularity = 0;
-            
+
             // Calculate perimeter using the optimized implementation
-            perimeter(labeled, &blobinfo, 1);  // Get perimeter of blob #1
-            
+            perimeter(labeled, &blobinfo, 1); // Get perimeter of blob #1
+
             ms2 = ms;
 
             // Convert perimeter result to display format
-            for(int i = 0; i < EVDK5_WIDTH * EVDK5_HEIGHT; i++)
+            for (int i = 0; i < EVDK5_WIDTH * EVDK5_HEIGHT; i++)
             {
-                ((uint8_pixel_t*)labeled->data)[i] = (((uint8_pixel_t*)labeled->data)[i] == 1) ? 255 : 0;
+                ((uint8_pixel_t *)labeled->data)[i] = (((uint8_pixel_t *)labeled->data)[i] == 1) ? 255 : 0;
             }
         }
 
@@ -1888,7 +1997,80 @@ void examplePerimeter(void)
         image_available_for_usb = 1;
 
         // Print execution time and perimeter info
-        PRINTF("Perimeter execution time: %d us, Perimeter length: %.2f\r\n", 
-               (ms2-ms1)*10, blobinfo.perimeter);
+        PRINTF("Perimeter execution time: %d us, Perimeter length: %.2f\r\n",
+               (ms2 - ms1) * 10, blobinfo.perimeter);
+    }
+}
+
+void exampleHuffmanCoding(void)
+{
+    PRINTF("%s\r\n", __func__);
+
+    // Update SysTick to have better precision
+    SysTick_Config(SystemCoreClock / 100000);
+
+    // Create source and destination images
+    image_t *src = newUint8Image(EVDK5_WIDTH, EVDK5_HEIGHT);
+    image_t *dst = newUint8Image(EVDK5_WIDTH, EVDK5_HEIGHT);
+
+    if (src == NULL || dst == NULL)
+    {
+        PRINTF("Could not allocate image memory\r\n");
+        while (1) {}
+    }
+    
+    // Create structure to hold encoded data
+    EncodedImage encoded;
+    int32_t encodeResult, decodeResult;
+    float compressionRatio;
+
+    while (1U)
+    {
+        // Wait for camera image complete
+        while(smartdma_camera_image_complete == 0) {}
+        smartdma_camera_image_complete = 0;
+
+        // Convert camera image to uint8
+        convertUyvyToUint8(cam, src);
+
+        // Encode the image
+        ms1 = ms;
+        encodeResult = huffmanEncode(src, &encoded);
+        ms2 = ms;
+        
+        // Check for encode failures
+        if (!encodeResult) {
+            PRINTF("Huffman encoding failed\r\n");
+            convertToBgr888(src, usb);  // Show original image if encoding fails
+            image_available_for_usb = 1;
+            continue;  // Skip to next frame
+        }
+
+        // Calculate and print compression statistics
+        compressionRatio = (float)(src->cols * src->rows) / encoded.size;
+        PRINTF("CR: %.2f:1 | E: %04d s", compressionRatio, (ms2 - ms1) * 10);
+
+        // Decode the image
+        ms1 = ms;
+        decodeResult = huffmanDecode(&encoded, dst);
+        ms2 = ms;
+        
+        // Free encoded data (whether decoding succeeded or not)
+        freeEncodedImage(&encoded);
+        
+        // Check for decode failures
+        if (!decodeResult) {
+            PRINTF(" | Decode failed\r\n");
+            convertToBgr888(src, usb);  // Show original image if decoding fails
+            image_available_for_usb = 1;
+            continue;  // Skip to next frame
+        }
+
+        // Decoding successful - print timing and display result
+        PRINTF(" | D: %04d us\r\n", (ms2 - ms1) * 10);
+        convertToBgr888(dst, usb);
+        
+        // Set flag for USB interface that a new frame is available
+        image_available_for_usb = 1;
     }
 }
