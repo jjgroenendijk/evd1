@@ -939,7 +939,7 @@ uint32_t removeBorderBlobsTwoPass(const image_t *src, image_t *dst, const eConne
     // First, we check if the pictures are valid.
     if (!src || !dst || !src->data || !dst->data)
     {
-        return 2;
+        return 0;
     }
 
     uint32_t width = src->cols;
@@ -1133,7 +1133,7 @@ uint32_t removeBorderBlobsTwoPass(const image_t *src, image_t *dst, const eConne
                 {
                     free(labelEquivalence);
                     free(labelMap);
-                    return 5;
+                    return 0;
                 }
 
                 labelMap[pixelPosition] = currentLabelID;

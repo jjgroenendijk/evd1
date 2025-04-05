@@ -374,6 +374,7 @@ void thresholdOtsu(const image_t *src, image_t *dst, const eBrightness b)
     {
         if (b == BRIGHTNESS_DARK)
         {
+            // For dark objects, set pixels below threshold to 1 (white)
             if (sourcePixel[i] <= optimalThreshold)
             {
                 destinationPixel[i] = 1;
@@ -385,6 +386,7 @@ void thresholdOtsu(const image_t *src, image_t *dst, const eBrightness b)
         }
         else
         {
+            // For bright objects, set pixels above threshold to 1 (white)
             if (sourcePixel[i] >= optimalThreshold)
             {
                 destinationPixel[i] = 1;
@@ -495,4 +497,3 @@ void lineDetector(const image_t *src, image_t *dst, int16_t mask[][3])
         }
     }
 }
-
